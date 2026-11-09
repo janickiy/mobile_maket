@@ -1378,79 +1378,6 @@ small {
 .prejoin-info .button {
   width: 100%;
 }
-.call-screen {
-  height: 100%;
-  min-height: 0;
-  background: #171f2d;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-}
-.call-screen .statusbar {
-  background: #171f2d;
-  color: #d2d8e3;
-}
-.call-header {
-  padding: 13px 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.call-header h1 {
-  font-size: 17px;
-  letter-spacing: -0.3px;
-}
-.call-header p {
-  color: #9eacbf;
-  font-size: 11px;
-  margin-top: 5px;
-}
-.call-header .badge {
-  background: #ffffff10;
-  color: #c4d1e8;
-}
-.record-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ee8190;
-}
-.call-body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-  padding: 6px 20px 12px;
-  gap: 14px;
-}
-.call-stage {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  gap: 12px;
-}
-.share-stage {
-  flex: 1;
-  min-height: 0;
-  background: #101723;
-  border-radius: 18px;
-  padding: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.sharing-label {
-  position: absolute;
-  bottom: 12px;
-  left: 14px;
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  color: #b1bdd2;
-  font-size: 10px;
-}
 .presentation {
   background: #f7f5ee;
   color: #24342e;
@@ -1506,132 +1433,6 @@ small {
   font-size: 8px;
   letter-spacing: 1px;
   z-index: 1;
-}
-.participant-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.participant {
-  position: relative;
-  min-height: 102px;
-  background: #2b3546;
-  border: 1px solid #354154;
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-}
-.participant.speaking {
-  border: 2px solid #a9c19a;
-  background: #303d40;
-}
-.participant .avatar {
-  border-radius: 50%;
-  width: 46px;
-  height: 46px;
-  font-size: 14px;
-}
-.participant .person-name {
-  position: absolute;
-  bottom: 7px;
-  left: 9px;
-  font-size: 9px;
-  color: #c5d0df;
-}
-.participant > svg {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 13px;
-  height: 13px;
-  color: #b4bfd0;
-}
-.call-side {
-  width: 265px;
-  flex-shrink: 0;
-  background: #222c3b;
-  border: 1px solid #303c4e;
-  border-radius: 18px;
-  padding: 18px;
-  overflow: auto;
-}
-.call-side h2 {
-  font-size: 14px;
-}
-.call-side .chat-message {
-  max-width: 100%;
-  margin-top: 18px;
-}
-.call-side .bubble {
-  background: #2d394d;
-  color: #e2e8f1;
-  border: 0;
-  font-size: 11px;
-}
-.call-side .bubble small {
-  color: #a2aec1;
-}
-.call-side .chat-date {
-  margin-top: 20px;
-  color: #a4b0c3;
-}
-.call-side input {
-  width: 100%;
-  border: 1px solid #445066;
-  border-radius: 10px;
-  padding: 12px;
-  margin-top: 16px;
-  color: #fff;
-  background: #2b3546;
-  font-size: 12px;
-}
-.call-toolbar {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px 25px;
-  flex-shrink: 0;
-}
-.call-control {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 7px;
-  background: transparent;
-  color: #cad4e4;
-  min-width: 58px;
-  font-size: 9px;
-}
-.call-control .control-disc {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 48px;
-  background: #303c4f;
-  border-radius: 15px;
-}
-.call-control.off .control-disc {
-  background: #e2e8f0;
-  color: #263449;
-}
-.call-control.selected .control-disc {
-  background: #4668ad;
-  color: #fff;
-}
-.call-control.leave .control-disc {
-  background: #dd5d6a;
-  width: 68px;
-  color: #fff;
-}
-.call-control.leave {
-  margin-left: 12px;
-}
-.call-side[hidden] {
-  display: none;
 }
 .settings-layout {
   display: grid;
@@ -1912,12 +1713,6 @@ small {
   }
   .camera-preview {
     aspect-ratio: 16/10;
-  }
-  .call-side {
-    width: 240px;
-  }
-  .call-screen:has(.call-side:not([hidden])) .participant-strip {
-    grid-template-columns: 1fr 1fr;
   }
   .presentation h2 {
     font-size: 30px;
@@ -2374,36 +2169,6 @@ small {
   .prejoin-info .field {
     margin: 20px 0 12px;
   }
-  .call-header {
-    padding: 13px 16px;
-  }
-  .call-header h1 {
-    font-size: 14px;
-  }
-  .call-header p {
-    font-size: 10px;
-  }
-  .call-header .badge {
-    font-size: 9px;
-    padding: 5px 7px;
-  }
-  .call-header > .icon-button {
-    display: none;
-  }
-  .call-body {
-    padding: 8px 12px;
-    display: block;
-    position: relative;
-  }
-  .call-stage {
-    height: 100%;
-    gap: 11px;
-  }
-  .share-stage {
-    padding: 10px;
-    border-radius: 16px;
-    min-height: 210px;
-  }
   .presentation {
     width: 100%;
     padding: 7%;
@@ -2421,57 +2186,6 @@ small {
   }
   .pres-circles:after {
     border-width: 16px;
-  }
-  .sharing-label {
-    font-size: 9px;
-    bottom: 10px;
-  }
-  .sharing-label svg {
-    width: 12px;
-    height: 12px;
-  }
-  .participant-strip {
-    grid-template-columns: 1fr 1fr;
-    gap: 9px;
-  }
-  .participant {
-    min-height: 100px;
-  }
-  .participant .avatar {
-    width: 44px;
-    height: 44px;
-  }
-  .call-toolbar {
-    gap: 5px;
-    padding: 15px 10px 23px;
-    justify-content: space-around;
-  }
-  .call-control {
-    min-width: 45px;
-    font-size: 8px;
-    gap: 6px;
-    padding: 0;
-  }
-  .call-control .control-disc {
-    width: 45px;
-    height: 46px;
-    border-radius: 14px;
-  }
-  .call-control.leave {
-    margin: 0;
-  }
-  .call-control.leave .control-disc {
-    width: 51px;
-  }
-  .call-control.share-control {
-    display: none;
-  }
-  .call-side {
-    position: absolute;
-    inset: 8px 12px;
-    width: auto;
-    z-index: 3;
-    box-shadow: 0 8px 20px #0003;
   }
   .settings-layout {
     display: block;
@@ -2675,13 +2389,6 @@ small {
   }
   .settings-menu button {
     min-height: 48px;
-  }
-  .call-control {
-    min-width: 48px;
-  }
-  .call-control .control-disc {
-    width: 48px;
-    height: 48px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

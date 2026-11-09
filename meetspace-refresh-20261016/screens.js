@@ -466,13 +466,58 @@
         "meetings",
       ),
   };
-  const callControl = (label, icon, action, cls = "") =>
-    `<button class="call-control ${cls}" data-action="${action}" aria-label="${label}"><span class="control-disc">${I(icon)}</span><span>${label}</span></button>`;
+  const callControl = (label, icon, action, active, extra = "") =>
+    `<button type="button" class="call-control ${action === "leaveCall" ? "leave" : ""}" data-action="${action}" aria-label="${label}" title="${label}" ${active === undefined ? "" : `aria-pressed="${active}"`} ${extra}>${I(icon)}<span>${label}</span></button>`;
+  const meetingKey = () => M.state.meetingMeta?.id || M.state.meetingTitle || "design";
+  let reconnectingMeeting = null;
+  let sharingMeeting = null;
+  const renderCallVideo = (sharing) => {
+    const featured = M.meetingRoom().people.find((person) => person.id === "dmitry") ||
+      M.meetingRoom().people.find((person) => person.id !== "self");
+    const selfName = M.state.participantName || M.state.profileName || "Александр Соколов";
+    const localAvatar = M.profileAvatarMarkup?.(M.profileInitials?.() || "АС") || E(M.profileInitials?.() || "АС");
+    const demoVideo = featured?.id === "dmitry" && !featured.camera;
+    const name = sharing ? "Ваш экран" : featured?.name || `${selfName} · вы`;
+    const icon = sharing ? "MonitorUp" : featured ? (demoVideo && !featured.mute ? "Mic" : "MicOff") : M.state.mic ? "Mic" : "MicOff";
+    return `<div class="call-video-area">
+      <section class="call-video-frame" aria-label="${E(sharing ? name : `Видео · ${name}`)}">
+        ${sharing ? presentation() : demoVideo ? '<img class="call-video-image" src="assets/call-camera-demo.jpg" alt="" width="1280" height="720"/>' : avatar(featured ? E(featured.initials) : localAvatar)}
+        ${M.state.camera && featured && !sharing ? `<div class="call-self-view" aria-label="Предпросмотр вашей камеры">${avatar(localAvatar)}<span>Вы</span></div>` : ""}
+        <div class="call-video-label"><span>${E(name)}</span>${I(icon)}</div>
+      </section>
+    </div>`;
+  };
   M.screens.call = {
     title: "Видеовстреча",
     group: "Встреча",
-    render: () =>
-      `<main class="call-screen">${status()}<header class="call-header"><div class="call-heading"><h1>${E(M.state.meetingTitle || "Дизайн-синхронизация")}</h1><p>12:48 <span style="color:#60718c">/</span> 5 участников</p></div>${M.renderRecordingControl()}<button class="icon-button" data-action="callInfo" aria-label="Информация о встрече">${I("Ellipsis")}</button></header><div class="call-body"><div class="call-stage"><section class="share-stage">${presentation()}<div class="sharing-label">${I("Monitor")} Анна Кузнецова демонстрирует экран</div></section><div class="participant-strip"><div class="participant speaking">${avatar("АК", "orange")}<span class="person-name">Анна Кузнецова</span>${I("AudioLines")}</div><div class="participant">${avatar("МП", "mint")}<span class="person-name">Мария Полякова</span>${I("MicOff")}</div><div class="participant">${avatar("ДВ")}<span class="person-name">Дмитрий Волков</span>${I("MicOff")}</div><div class="participant">${avatar(M.profileAvatarMarkup?.(M.profileInitials?.() || "АС") || E(M.profileInitials?.() || "АС"), "blue")}<span class="person-name">Вы${M.state.camera ? " · камера в демо" : ""}</span>${I(M.state.mic ? "Mic" : "MicOff")}</div></div></div>${M.renderMeetingChat()}</div><footer class="call-toolbar">${callControl(M.state.mic ? "Микрофон" : "Без звука", M.state.mic ? "Mic" : "MicOff", "mic", M.state.mic ? "" : "off")}${callControl("Камера", M.state.camera ? "Video" : "VideoOff", "camera", M.state.camera ? "" : "off")}${callControl("Экран", "MonitorUp", "shareScreen", "share-control")}${callControl("Участники", "Users", "participants")}${callControl("Чат", "MessageCircle", "callChat", M.state.callChat ? "selected" : "")}${callControl("Выйти", "PhoneOff", "leaveCall", "leave")}</footer><nav class="bottom-nav" aria-label="Основная навигация">${nav("meetings")}</nav></main>`,
+    render: () => {
+      const title = M.state.meetingTitle || "Дизайн-синхронизация";
+      const reconnecting = reconnectingMeeting === meetingKey();
+      const sharing = sharingMeeting === meetingKey();
+      return `<main class="call-screen">${status()}
+        <header class="call-header">
+          <button type="button" class="call-back" data-action="leaveCall" aria-label="Назад к встречам" title="Назад к встречам">${I("ArrowLeft")}</button>
+          <div class="call-heading"><h1 title="${E(title)}">${E(title)}</h1><p role="status">${reconnecting ? "Переподключение…" : "Встреча в эфире"}</p></div>
+          <time class="call-duration" datetime="PT12M48S" aria-label="Время встречи: 12 минут 48 секунд">12:48</time>
+          <div class="call-header-actions" role="group" aria-label="Действия встречи">
+            ${M.renderRecordingControl()}
+            <button type="button" class="call-header-action" data-action="callInvite" aria-label="Пригласить" title="Пригласить" aria-haspopup="dialog">${I("Link")}<span>Пригласить</span></button>
+            <button type="button" class="call-header-action" data-action="callReconnect" aria-label="Переподключиться" title="Переподключиться" aria-disabled="${reconnecting}">${I("RefreshCw")}</button>
+          </div>
+        </header>
+        <div class="call-body">${renderCallVideo(sharing)}${M.renderMeetingChat()}</div>
+        <footer class="call-toolbar"><div class="call-controls" role="group" aria-label="Управление видеовстречей">
+          ${callControl("Микрофон", M.state.mic ? "Mic" : "MicOff", "mic", M.state.mic)}
+          ${callControl("Камера", M.state.camera ? "Video" : "VideoOff", "camera", M.state.camera)}
+          ${callControl("Экран", sharing ? "ScreenShareOff" : "MonitorUp", "shareScreen", sharing)}
+          ${callControl("Настройки", "Settings", "devices", undefined, 'aria-haspopup="dialog"')}
+          ${callControl("Участники", "Users", "callParticipants", M.state.callPanel === "participants")}
+          ${callControl("Чат", "MessageCircle", "callChat", M.state.callPanel === "chat")}
+          ${callControl("Выйти", "LogOut", "leaveCall", undefined, 'aria-haspopup="dialog"')}
+        </div></footer>
+        <nav class="bottom-nav" aria-label="Основная навигация">${nav("meetings")}</nav>
+      </main>`;
+    },
     bind: () => M.bindMeetingChat(),
   };
   M.actions = {
@@ -699,10 +744,12 @@
     mic: () => {
       M.state.mic = !M.state.mic;
       M.render();
+      document.querySelector('.call-control[data-action="mic"]')?.focus();
     },
     camera: () => {
       M.state.camera = !M.state.camera;
       M.render();
+      document.querySelector('.call-control[data-action="camera"]')?.focus();
     },
     devices: () =>
       M.modal(
@@ -734,16 +781,39 @@
           )
           .join("")}</div>`,
       ),
-    shareScreen: () =>
+    shareScreen: () => {
+      if (sharingMeeting === meetingKey()) {
+        M.actions.toggleCallShare();
+        return;
+      }
       M.modal(
         "Демонстрация экрана",
-        `<div class="stack"><p>В Android-приложении системный диалог запросит разрешение на показ экрана. Этот макет демонстрирует экран Анны.</p><button class="button primary" data-close>Понятно</button></div>`,
-      ),
-    callInfo: () =>
-      M.modal(
-        "О встрече",
-        `<div class="stack"><p>Дизайн-синхронизация · 5 участников</p><p>Управляйте записью кнопкой вверху экрана. Сообщения и файлы доступны в чате встречи.</p><button class="button secondary" data-action="copyInvite">${I("Link")}Ссылка приглашения</button></div>`,
-      ),
+        `<div class="stack"><p>Откройте пример демонстрации экрана.</p><button class="button primary" data-action="toggleCallShare">${I("MonitorUp")}Показать пример</button></div>`,
+      );
+    },
+    toggleCallShare: () => {
+      sharingMeeting = sharingMeeting === meetingKey() ? null : meetingKey();
+      M.closeModal();
+      M.render();
+      document.querySelector('.call-control[data-action="shareScreen"]')?.focus();
+    },
+    callReconnect: () => {
+      const key = meetingKey();
+      if (reconnectingMeeting === key) return;
+      reconnectingMeeting = key;
+      M.render();
+      document.querySelector('[data-action="callReconnect"]')?.focus();
+      setTimeout(() => {
+        if (reconnectingMeeting !== key) return;
+        reconnectingMeeting = null;
+        if (M.state.screen !== "call" || meetingKey() !== key) return;
+        const button = document.querySelector('[data-action="callReconnect"]');
+        button?.setAttribute("aria-disabled", "false");
+        const status = document.querySelector(".call-heading [role=status]");
+        if (status) status.textContent = "Встреча в эфире";
+        M.toast("Демо: подключение восстановлено");
+      }, 900);
+    },
     leaveCall: () =>
       M.modal(
         "Выйти из встречи?",

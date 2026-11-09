@@ -21,8 +21,8 @@
       {id:'max',name:'Максим Петров',initials:'МП',role:'participant'}
     ],waiting:[{id:'guest',name:'Елена Смирнова',initials:'ЕС',role:'guest'}], invitations:[]};
   };
-  const labels = {idle:'Записать',starting:'Запуск записи',recording:'Идёт запись',processing:'Обработка записи',ready:'Запись готова'};
-  M.renderRecordingControl = () => `<button class="recording-control ${room().recording}" data-action="manageRecording" aria-label="Управление записью: ${labels[room().recording]}" aria-haspopup="dialog">${I(room().recording === 'recording' ? 'CircleDot':'Circle')}<span>${labels[room().recording]}</span>${I('ChevronDown')}</button>`;
+  const labels = {idle:'Запись',starting:'Запуск записи',recording:'Идёт запись',processing:'Обработка записи',ready:'Запись готова'};
+  M.renderRecordingControl = () => `<button class="recording-control ${room().recording}" data-action="manageRecording" aria-label="Управление записью: ${labels[room().recording]}" aria-haspopup="dialog" title="${labels[room().recording]}">${I(room().recording === 'recording' ? 'CircleDot':'Circle')}<span>${labels[room().recording]}</span></button>`;
   M.actions.manageRecording = () => {
     if(M.state.guestMode){M.modal('Запись встречи', `<div class="stack"><p>Гости не могут запускать запись. Попросите участника встречи с аккаунтом начать запись.</p><button class="button secondary" data-close>Понятно</button></div>`);return;}
     const s = room();
@@ -47,19 +47,43 @@
     s.recording='processing';M.closeModal();M.render();setTimeout(()=>{const current=M.state.roomRefresh?.[roomKey];if(!current||current.recording!=='processing'||current.recordToken!==recordToken)return;current.recording='ready';current.recordIndex=M.addMeetingRecording?.({key:roomKey+':'+recordToken,title,mode:current.mode,people:current.people.length});M.render();M.toast('Демо: запись добавлена в библиотеку.');},1600);
   };
   const roleLabel = p => ({owner:'Организатор',co_host:'Соорганизатор',participant:'Участник',guest:'Гость'})[p.role];
-  M.actions.participants = () => {
-    const s=room();
-    M.modal(`Участники · ${s.people.length}`,`<div class="stack"><div class="wr-notice">${I('ShieldCheck')}${isOwner()?'Вы управляете встречей как организатор.':'Участники и роли в этой встрече.'}</div>${isOwner() && s.waiting.length ? `<section class="wr-waiting"><h3>Зал ожидания <span>${s.waiting.length}</span></h3>${s.waiting.map(p=>`<div class="wr-person"><span class="avatar">${p.id==='self'?M.profileAvatarMarkup?.(p.initials)||p.initials:p.initials}</span><div><strong>${E(p.name)}</strong><small>Гость · ожидает допуска</small></div></div><div class="wr-inline-actions"><button class="button primary" data-action="wrAdmit" data-id="${p.id}">Допустить</button><button class="button secondary" data-action="wrReject" data-id="${p.id}">Отклонить</button></div>`).join('')}</section>`:''}<div class="wr-people">${s.people.map(p=>`<div class="wr-person"><span class="avatar ${p.id==='self'?'blue':'mint'}">${p.id==='self'?M.profileAvatarMarkup?.(p.initials)||p.initials:p.initials}</span><div><strong>${E(p.name)}</strong><small>${roleLabel(p)}${p.mute?' · звук запрещён':''}${p.camera?' · видео запрещено':''}${p.screen?' · экран запрещён':''}</small></div>${isOwner() && p.id!=='self'?`<button class="icon-button" data-action="wrPerson" data-id="${p.id}" aria-label="Управление: ${E(p.name)}">${I('Ellipsis')}</button>`:''}</div>`).join('')}</div><button class="button secondary" data-action="wrInvite">${I('UserPlus')}Пригласить участников</button></div>`);
+  M.meetingRoom = room;
+  M.renderMeetingParticipants = () => {
+    const { people, waiting } = room();
+    const owner = isOwner();
+    return `<div class="stack">
+      <div class="wr-notice">${I('ShieldCheck')}${owner ? 'Вы управляете встречей как организатор.' : 'Участники и роли в этой встрече.'}</div>
+      ${owner && waiting.length ? `<section class="wr-waiting"><h3>Зал ожидания <span>${waiting.length}</span></h3>
+        ${waiting.map(p => `<div class="wr-person"><span class="avatar">${p.initials}</span><div><strong>${E(p.name)}</strong><small>Гость · ожидает допуска</small></div></div>
+        <div class="wr-inline-actions"><button class="button primary" data-action="wrAdmit" data-id="${p.id}">Допустить</button><button class="button secondary" data-action="wrReject" data-id="${p.id}">Отклонить</button></div>`).join('')}
+      </section>` : ''}
+      <div class="wr-people">${people.map(p => {
+        const self = p.id === 'self';
+        const initials = self ? M.profileInitials?.() || p.initials : p.initials;
+        return `<div class="wr-person"><span class="avatar ${self ? 'blue' : 'mint'}">${self ? M.profileAvatarMarkup?.(initials) || E(initials) : E(initials)}</span>
+          <div><strong>${E(p.name)}</strong><small>${roleLabel(p)}${p.mute ? ' · звук запрещён' : ''}${p.camera ? ' · видео запрещено' : ''}${p.screen ? ' · экран запрещён' : ''}</small></div>
+          ${owner && !self ? `<button class="icon-button" data-action="wrPerson" data-id="${p.id}" aria-label="Управление: ${E(p.name)}">${I('Ellipsis')}</button>` : ''}
+        </div>`;
+      }).join('')}</div>
+      <button class="button secondary" data-action="callInvite">${I('Link')}Пригласить участников</button>
+    </div>`;
   };
-  M.actions.wrAdmit = b => { const s=room();if(!isOwner())return;const p=s.waiting.find(p=>p.id===b.dataset.id);if(!p)return;s.people.push(p);s.waiting=s.waiting.filter(x=>x!==p);M.render();M.actions.participants(); };
-  M.actions.wrReject = b => {if(!isOwner())return;room().waiting=room().waiting.filter(p=>p.id!==b.dataset.id);M.render();M.actions.participants();};
+  M.actions.participants = () => {
+    if (M.state.screen === 'call') {
+      M.actions.showCallParticipants();
+    } else {
+      M.modal(`Участники · ${room().people.length}`, M.renderMeetingParticipants());
+    }
+  };
+  M.actions.wrAdmit = b => { const s=room();if(!isOwner())return;const p=s.waiting.find(p=>p.id===b.dataset.id);if(!p)return;s.people.push(p);s.waiting=s.waiting.filter(x=>x!==p);M.actions.participants();M.productStateChanged(); };
+  M.actions.wrReject = b => {if(!isOwner())return;room().waiting=room().waiting.filter(p=>p.id!==b.dataset.id);M.actions.participants();M.productStateChanged();};
   M.actions.wrPerson = b => {
     const p=room().people.find(p=>p.id===b.dataset.id);if(!p||p.id==='self'||!isOwner())return;
     M.modal(p.name,`<div class="stack"><p>${roleLabel(p)}</p>${[['mute','MicOff','микрофон'],['camera','VideoOff','камеру'],['screen','Monitor','экран']].map(([id,icon,label])=>`<button class="button secondary" data-action="wrModerate" data-id="${p.id}" data-control="${id}">${I(icon)}${p[id]?'Разрешить':'Отключить'} ${label}</button>`).join('')}<button class="button secondary" data-action="wrModerate" data-id="${p.id}" data-control="role">${I('Users')}${p.role==='co_host'?'Убрать роль соорганизатора':'Назначить соорганизатором'}</button><button class="button danger" data-action="wrKick" data-id="${p.id}">Исключить из встречи</button><button class="button quiet" data-action="participants">К участникам</button></div>`);
   };
   M.actions.wrModerate = b => {const p=room().people.find(p=>p.id===b.dataset.id);if(!p||p.id==='self'||!isOwner())return;const c=b.dataset.control;if(c==='role')p.role=p.role==='co_host'?'participant':'co_host';else if(['mute','camera','screen'].includes(c))p[c]=!p[c];M.render();M.actions.wrPerson(b);};
   M.actions.wrKick = b => {const p=room().people.find(p=>p.id===b.dataset.id);if(!p||p.id==='self'||!isOwner())return;M.modal('Исключить участника?',`<div class="stack"><p>${E(p.name)} покинет встречу. Повторное присоединение будет запрещено.</p><button class="button danger" data-action="wrConfirmKick" data-id="${p.id}">Исключить</button><button class="button secondary" data-action="participants">Отмена</button></div>`);};
-  M.actions.wrConfirmKick = b => {if(!isOwner())return;room().people=room().people.filter(p=>p.id!==b.dataset.id||p.id==='self');M.render();M.actions.participants();};
+  M.actions.wrConfirmKick = b => {if(!isOwner())return;room().people=room().people.filter(p=>p.id!==b.dataset.id||p.id==='self');M.actions.participants();M.productStateChanged();};
   M.actions.wrInvite = () => M.modal('Пригласить участников',`<form id="wr-invite-form" class="stack"><p>Найдите коллегу или укажите email для приглашения.</p><label class="field">Имя или email<input id="wr-invite-query" type="search" autocomplete="off" placeholder="Например, Мария"/></label><div id="wr-invite-results"></div><div class="wr-selected" id="wr-invite-selected"></div><button class="button primary" id="wr-invite-send" disabled>Пригласить</button><button class="button secondary" type="button" data-action="copyInvite">${I('Link')}Скопировать ссылку</button><p class="wr-hint">По действующей ссылке можно войти без аккаунта и без ожидания допуска.</p><small class="wr-hint">Демо: приглашения не отправляются.</small></form>`,()=>{
     const selected=new Map(), input=document.getElementById('wr-invite-query'),results=document.getElementById('wr-invite-results');
     const directory=[['maria','Мария Полякова','maria@example.org'],['anna','Анна Кузнецова','anna@example.org'],['max','Максим Петров','max@example.org']];
@@ -77,8 +101,6 @@
   M.actions.openConference=b=>{M.state.guestMode=false;openConference(b);};
   const originalMeetingRender=M.screens.meetings.render;
   M.screens.meetings.render=()=>originalMeetingRender().replace('<section class="cf-list-section"',`<div class="wr-shortcuts"><button data-go="recordings">${I('CirclePlay')}Записи и материалы ${I('ChevronRight')}</button><button data-go="folders">${I('Folder')}Мои папки ${I('ChevronRight')}</button></div><section class="cf-list-section"`);
-  const callRender=M.screens.call.render;
-  M.screens.call.render=()=>callRender().replaceAll('5 участников',`${room().people.length} участников`).replace('<div class="call-body">',`<div class="wr-call-context"><span>${I('ShieldCheck')}${isOwner()?'Вы — организатор':M.state.guestMode?'Вы — гость':'Вы — участник'}</span><button data-action="participants">${I('Users')}${isOwner() && room().waiting.length ? `Ожидают допуска: ${room().waiting.length}`:'Участники встречи'}</button></div><div class="call-body">`);
   const syncFields=['meetingTitle','meetingMeta','meetingItems','meetings','created','guestMode','participantName'];
   M.workspaceRefreshSnapshot=()=>JSON.parse(JSON.stringify({rooms:M.state.roomRefresh||{},fields:Object.fromEntries(syncFields.filter(k=>M.state[k]!==undefined).map(k=>[k,M.state[k]]))}));
   M.setWorkspaceRefreshSnapshot=value=>{
