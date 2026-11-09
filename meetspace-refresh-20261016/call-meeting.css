@@ -298,7 +298,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.call-tile-short-name { display: none; }
 .call-tile-caption svg {
   flex-shrink: 0;
   width: 13px;
@@ -359,7 +358,7 @@
   .call-screen {
     --call-gutter: 12px;
     --call-stack-gap: 8px;
-    --call-tile-height: 64px;
+    --call-tile-height: clamp(64px, 10dvh, 88px);
     --call-tile-gap: 6px;
   }
   .call-header { gap: 7px; padding: 6px 0 12px; }
@@ -377,17 +376,27 @@
   .call-back, .call-header-action, .call-header .recording-control { padding-inline: 0; }
   .call-header-actions button > span { display: none; }
   .call-body { flex-direction: column; gap: 10px; padding: 10px 0; }
-  .call-body:has(.meeting-chat:not([hidden])) .call-video-area {
-    flex: 0 0 auto;
-    container-type: inline-size;
+  .call-body:has(.meeting-chat:not([hidden])) {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .call-body:has(.meeting-chat:not([hidden])) .call-video-frame { width: min(100%, calc(34dvh * 16 / 9)); }
-  .call-participant-strip > li { flex-basis: clamp(64px, calc((100% - 4 * var(--call-tile-gap)) / 5), 92px); }
+  .call-video-stack {
+    /* Keep at least one row under the 16:9 frame before the tiles begin scrolling. */
+    --call-frame-height: max(0px, min(calc(100cqw * 9 / 16), calc(100cqh - var(--call-tile-height) - var(--call-stack-gap) - 4px)));
+  }
+  .call-video-frame { width: calc(var(--call-frame-height) * 16 / 9); }
+  .call-participant-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: var(--call-tile-height);
+    align-content: start;
+    max-height: max(0px, calc(100cqh - var(--call-frame-height) - var(--call-stack-gap)));
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+  }
   .call-participant-tile { border-radius: 8px; }
-  .call-participant-tile .avatar { width: 29px; height: 29px; font-size: 10px; }
-  .call-tile-caption { font-size: 10px; padding-inline: 4px; text-align: center; }
-  .call-tile-full-name { display: none; }
-  .call-tile-short-name { display: inline; }
+  .call-participant-tile .avatar { width: 34px; height: 34px; font-size: 11px; }
+  .call-tile-caption { padding-inline: 6px; text-align: center; }
   .call-tile-caption svg {
     position: absolute;
     top: 3px;

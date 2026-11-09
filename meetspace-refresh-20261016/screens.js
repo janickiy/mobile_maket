@@ -493,8 +493,7 @@
         aria-label="${E(label)}" title="${E(label)}">
         ${view.video ? callVideoImage("call-tile-image") : view.avatar}
         <span class="call-tile-caption">
-          <span class="call-tile-full-name">${E(view.name)}</span>
-          <span class="call-tile-short-name">${E(view.name.split(" ", 1)[0])}</span>
+          <span>${E(view.name)}</span>
           ${I(view.mic ? "Mic" : "MicOff")}
         </span>
       </button></li>`;
@@ -531,7 +530,7 @@
       const sharing = sharingMeeting === meetingKey();
       return `<main class="call-screen">${status()}
         <header class="call-header">
-          <button type="button" class="call-back" data-go="messages" aria-label="К списку чатов" title="К списку чатов">${I("ArrowLeft")}</button>
+          <button type="button" class="call-back" data-go="meetings" aria-label="К списку встреч" title="К списку встреч">${I("ArrowLeft")}</button>
           <div class="call-heading"><h1 title="${E(title)}">${E(title)}</h1><p role="status">${reconnecting ? "Переподключение…" : "Встреча в эфире"}</p></div>
           <time class="call-duration" datetime="PT12M48S" aria-label="Время встречи: 12 минут 48 секунд">12:48</time>
           <div class="call-header-actions" role="group" aria-label="Действия встречи">
@@ -835,11 +834,12 @@
       if (sharingMeeting === meetingKey() || button.getAttribute("aria-pressed") === "true") return;
       const id = button.dataset.personId;
       if (!M.meetingRoom().people.some((person) => person.id === id)) return;
-      const scrollLeft = button.closest(".call-participant-strip").scrollLeft;
+      const { scrollLeft, scrollTop } = button.closest(".call-participant-strip");
       focusedCallParticipants.set(meetingKey(), id);
       M.render(false);
       const strip = document.querySelector(".call-participant-strip");
       strip.scrollLeft = scrollLeft;
+      strip.scrollTop = scrollTop;
       strip.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
     },
     callReconnect: () => {

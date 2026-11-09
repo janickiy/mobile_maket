@@ -173,7 +173,7 @@
   let portrait = params.get("orientation") === "portrait";
   const $ = (id) => document.getElementById(id);
   const frames = [$("phone-preview"), $("tablet-preview")];
-  const initialPreview = `preview.html?rev=20261109-call-tiles&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
+  const initialPreview = `preview.html?rev=20261109-call-grid-v2&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
   frames.forEach((frame) => {
     if (frame.getAttribute("src") !== initialPreview)
       frame.src = initialPreview;
@@ -204,7 +204,7 @@
     if (current.id === "settings" && section) url.searchParams.set("section", section);
     else url.searchParams.delete("section");
     history.replaceState(null, "", url);
-    $("open-screen").href = `preview.html?rev=20261109-call-tiles&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
+    $("open-screen").href = `preview.html?rev=20261109-call-grid-v2&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
   }
   function notifyFrames(except) {
     frames.forEach((frame) => {
