@@ -469,23 +469,58 @@
   const callControl = (label, icon, action, active, extra = "") =>
     `<button type="button" class="call-control ${action === "leaveCall" ? "leave" : ""}" data-action="${action}" aria-label="${label}" title="${label}" ${active === undefined ? "" : `aria-pressed="${active}"`} ${extra}>${I(icon)}<span>${label}</span></button>`;
   const meetingKey = () => M.state.meetingMeta?.id || M.state.meetingTitle || "design";
+  const focusedCallParticipants = new Map();
   let reconnectingMeeting = null;
   let sharingMeeting = null;
+  const callVideoImage = (className) =>
+    `<img class="${className}" src="assets/call-camera-demo.jpg" alt="" width="1280" height="720"/>`;
+  const callParticipantView = (person, localAvatar) => {
+    const self = person.id === "self";
+    const tone = { self: "blue", anna: "orange", maria: "mint" }[person.id] || "";
+    return {
+      name: self ? "Вы" : person.name,
+      avatar: avatar(self ? localAvatar : E(person.initials), tone),
+      video: person.id === "dmitry" && !person.camera,
+      mic: self ? M.state.mic : person.id === "dmitry" && !person.mute,
+    };
+  };
+  const renderCallParticipantStrip = (people, featuredId, localAvatar, sharing) =>
+    `<ul class="call-participant-strip" role="list" aria-label="Участники видеовстречи">${people.map((person) => {
+      const view = callParticipantView(person, localAvatar);
+      const label = `${view.name} · микрофон ${view.mic ? "включён" : "выключен"}`;
+      return `<li><button type="button" class="call-participant-tile" data-action="focusCallParticipant"
+        data-person-id="${E(person.id)}" aria-pressed="${!sharing && featuredId === person.id}" ${sharing ? 'aria-disabled="true"' : ""}
+        aria-label="${E(label)}" title="${E(label)}">
+        ${view.video ? callVideoImage("call-tile-image") : view.avatar}
+        <span class="call-tile-caption">
+          <span class="call-tile-full-name">${E(view.name)}</span>
+          <span class="call-tile-short-name">${E(view.name.split(" ", 1)[0])}</span>
+          ${I(view.mic ? "Mic" : "MicOff")}
+        </span>
+      </button></li>`;
+    }).join("")}</ul>`;
   const renderCallVideo = (sharing) => {
-    const featured = M.meetingRoom().people.find((person) => person.id === "dmitry") ||
-      M.meetingRoom().people.find((person) => person.id !== "self");
+    const people = M.meetingRoom().people;
+    const speaker = people.find((person) => person.id === "dmitry") ||
+      people.find((person) => person.id !== "self") || people[0];
+    const featured = people.find((person) => person.id === focusedCallParticipants.get(meetingKey())) || speaker;
+    const tiles = [speaker, ...people.filter((person) => person !== speaker && person.id !== "self"),
+      ...people.filter((person) => person !== speaker && person.id === "self")];
     const selfName = M.state.participantName || M.state.profileName || "Александр Соколов";
-    const localAvatar = M.profileAvatarMarkup?.(M.profileInitials?.() || "АС") || E(M.profileInitials?.() || "АС");
-    const demoVideo = featured?.id === "dmitry" && !featured.camera;
-    const name = sharing ? "Ваш экран" : featured?.name || `${selfName} · вы`;
-    const icon = sharing ? "MonitorUp" : featured ? (demoVideo && !featured.mute ? "Mic" : "MicOff") : M.state.mic ? "Mic" : "MicOff";
-    return `<div class="call-video-area">
+    const initials = M.profileInitials?.() || "АС";
+    const localAvatar = M.profileAvatarMarkup?.(initials) || E(initials);
+    const view = callParticipantView(featured, localAvatar);
+    const isSelf = featured.id === "self";
+    const name = sharing ? "Ваш экран" : isSelf ? `${selfName} · вы` : view.name;
+    const icon = sharing ? "MonitorUp" : view.mic ? "Mic" : "MicOff";
+    return `<div class="call-video-area"><div class="call-video-stack">
       <section class="call-video-frame" aria-label="${E(sharing ? name : `Видео · ${name}`)}">
-        ${sharing ? presentation() : demoVideo ? '<img class="call-video-image" src="assets/call-camera-demo.jpg" alt="" width="1280" height="720"/>' : avatar(featured ? E(featured.initials) : localAvatar)}
-        ${M.state.camera && featured && !sharing ? `<div class="call-self-view" aria-label="Предпросмотр вашей камеры">${avatar(localAvatar)}<span>Вы</span></div>` : ""}
+        ${sharing ? presentation() : view.video ? callVideoImage("call-video-image") : view.avatar}
+        ${M.state.camera && !isSelf && !sharing ? `<div class="call-self-view" aria-label="Предпросмотр вашей камеры">${avatar(localAvatar)}<span>Вы</span></div>` : ""}
         <div class="call-video-label"><span>${E(name)}</span>${I(icon)}</div>
       </section>
-    </div>`;
+      ${renderCallParticipantStrip(tiles, featured.id, localAvatar, sharing)}
+    </div></div>`;
   };
   M.screens.call = {
     title: "Видеовстреча",
@@ -496,7 +531,7 @@
       const sharing = sharingMeeting === meetingKey();
       return `<main class="call-screen">${status()}
         <header class="call-header">
-          <button type="button" class="call-back" data-action="leaveCall" aria-label="Назад к встречам" title="Назад к встречам">${I("ArrowLeft")}</button>
+          <button type="button" class="call-back" data-go="messages" aria-label="К списку чатов" title="К списку чатов">${I("ArrowLeft")}</button>
           <div class="call-heading"><h1 title="${E(title)}">${E(title)}</h1><p role="status">${reconnecting ? "Переподключение…" : "Встреча в эфире"}</p></div>
           <time class="call-duration" datetime="PT12M48S" aria-label="Время встречи: 12 минут 48 секунд">12:48</time>
           <div class="call-header-actions" role="group" aria-label="Действия встречи">
@@ -515,7 +550,6 @@
           ${callControl("Чат", "MessageCircle", "callChat", M.state.callPanel === "chat")}
           ${callControl("Выйти", "LogOut", "leaveCall", undefined, 'aria-haspopup="dialog"')}
         </div></footer>
-        <nav class="bottom-nav" aria-label="Основная навигация">${nav("meetings")}</nav>
       </main>`;
     },
     bind: () => M.bindMeetingChat(),
@@ -796,6 +830,17 @@
       M.closeModal();
       M.render();
       document.querySelector('.call-control[data-action="shareScreen"]')?.focus();
+    },
+    focusCallParticipant: (button) => {
+      if (sharingMeeting === meetingKey() || button.getAttribute("aria-pressed") === "true") return;
+      const id = button.dataset.personId;
+      if (!M.meetingRoom().people.some((person) => person.id === id)) return;
+      const scrollLeft = button.closest(".call-participant-strip").scrollLeft;
+      focusedCallParticipants.set(meetingKey(), id);
+      M.render(false);
+      const strip = document.querySelector(".call-participant-strip");
+      strip.scrollLeft = scrollLeft;
+      strip.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
     },
     callReconnect: () => {
       const key = meetingKey();
