@@ -155,24 +155,6 @@
   color: var(--call-text);
   font-size: 24px;
 }
-.call-video-frame .presentation {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-height: none;
-  aspect-ratio: auto;
-  padding: 4%;
-}
-.call-video-frame .presentation h2 {
-  font-size: clamp(18px, 5cqw, 54px);
-  margin: 5% 0 3%;
-  letter-spacing: -.04em;
-}
-.call-video-frame .presentation > p,
-.call-video-frame .pres-footer {
-  font-size: clamp(7px, 1.4cqw, 12px);
-}
 .call-video-label,
 .call-self-view {
   position: absolute;
@@ -315,7 +297,8 @@
 }
 .call-controls {
   display: grid;
-  grid-template-columns: repeat(7, minmax(76px, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(76px, 1fr);
   gap: 6px;
   max-width: 100%;
   padding: 5px;
@@ -410,13 +393,10 @@
   .call-toolbar { padding-block: 8px; }
   .call-controls {
     width: 100%;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-columns: minmax(0, 1fr);
     gap: 4px;
     padding: 4px;
   }
-  .call-control { padding: 4px 0; min-height: 47px; font-size: 8px; }
+  .call-control { padding: 4px 0; min-height: 47px; font-size: clamp(8px, 2.6vw, 10px); }
   .call-control svg { width: 19px; height: 19px; }
-}
-@media (max-width: 375px) {
-  .call-control > span { display: none; }
 }

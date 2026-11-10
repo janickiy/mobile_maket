@@ -471,7 +471,6 @@
   const meetingKey = () => M.state.meetingMeta?.id || M.state.meetingTitle || "design";
   const focusedCallParticipants = new Map();
   let reconnectingMeeting = null;
-  let sharingMeeting = null;
   const callVideoImage = (className) =>
     `<img class="${className}" src="assets/call-camera-demo.jpg" alt="" width="1280" height="720"/>`;
   const callParticipantView = (person, localAvatar) => {
@@ -484,12 +483,12 @@
       mic: self ? M.state.mic : person.id === "dmitry" && !person.mute,
     };
   };
-  const renderCallParticipantStrip = (people, featuredId, localAvatar, sharing) =>
+  const renderCallParticipantStrip = (people, featuredId, localAvatar) =>
     `<ul class="call-participant-strip" role="list" aria-label="Участники видеовстречи">${people.map((person) => {
       const view = callParticipantView(person, localAvatar);
       const label = `${view.name} · микрофон ${view.mic ? "включён" : "выключен"}`;
       return `<li><button type="button" class="call-participant-tile" data-action="focusCallParticipant"
-        data-person-id="${E(person.id)}" aria-pressed="${!sharing && featuredId === person.id}" ${sharing ? 'aria-disabled="true"' : ""}
+        data-person-id="${E(person.id)}" aria-pressed="${featuredId === person.id}"
         aria-label="${E(label)}" title="${E(label)}">
         ${view.video ? callVideoImage("call-tile-image") : view.avatar}
         <span class="call-tile-caption">
@@ -498,7 +497,7 @@
         </span>
       </button></li>`;
     }).join("")}</ul>`;
-  const renderCallVideo = (sharing) => {
+  const renderCallVideo = () => {
     const people = M.meetingRoom().people;
     const speaker = people.find((person) => person.id === "dmitry") ||
       people.find((person) => person.id !== "self") || people[0];
@@ -510,15 +509,15 @@
     const localAvatar = M.profileAvatarMarkup?.(initials) || E(initials);
     const view = callParticipantView(featured, localAvatar);
     const isSelf = featured.id === "self";
-    const name = sharing ? "Ваш экран" : isSelf ? `${selfName} · вы` : view.name;
-    const icon = sharing ? "MonitorUp" : view.mic ? "Mic" : "MicOff";
+    const name = isSelf ? `${selfName} · вы` : view.name;
+    const icon = view.mic ? "Mic" : "MicOff";
     return `<div class="call-video-area"><div class="call-video-stack">
-      <section class="call-video-frame" aria-label="${E(sharing ? name : `Видео · ${name}`)}">
-        ${sharing ? presentation() : view.video ? callVideoImage("call-video-image") : view.avatar}
-        ${M.state.camera && !isSelf && !sharing ? `<div class="call-self-view" aria-label="Предпросмотр вашей камеры">${avatar(localAvatar)}<span>Вы</span></div>` : ""}
+      <section class="call-video-frame" aria-label="Видео · ${E(name)}">
+        ${view.video ? callVideoImage("call-video-image") : view.avatar}
+        ${M.state.camera && !isSelf ? `<div class="call-self-view" aria-label="Предпросмотр вашей камеры">${avatar(localAvatar)}<span>Вы</span></div>` : ""}
         <div class="call-video-label"><span>${E(name)}</span>${I(icon)}</div>
       </section>
-      ${renderCallParticipantStrip(tiles, featured.id, localAvatar, sharing)}
+      ${renderCallParticipantStrip(tiles, featured.id, localAvatar)}
     </div></div>`;
   };
   M.screens.call = {
@@ -527,7 +526,6 @@
     render: () => {
       const title = M.state.meetingTitle || "Дизайн-синхронизация";
       const reconnecting = reconnectingMeeting === meetingKey();
-      const sharing = sharingMeeting === meetingKey();
       return `<main class="call-screen">${status()}
         <header class="call-header">
           <button type="button" class="call-back" data-go="meetings" aria-label="К списку встреч" title="К списку встреч">${I("ArrowLeft")}</button>
@@ -539,12 +537,10 @@
             <button type="button" class="call-header-action" data-action="callReconnect" aria-label="Переподключиться" title="Переподключиться" aria-disabled="${reconnecting}">${I("RefreshCw")}</button>
           </div>
         </header>
-        <div class="call-body">${renderCallVideo(sharing)}${M.renderMeetingChat()}</div>
+        <div class="call-body">${renderCallVideo()}${M.renderMeetingChat()}</div>
         <footer class="call-toolbar"><div class="call-controls" role="group" aria-label="Управление видеовстречей">
           ${callControl("Микрофон", M.state.mic ? "Mic" : "MicOff", "mic", M.state.mic)}
           ${callControl("Камера", M.state.camera ? "Video" : "VideoOff", "camera", M.state.camera)}
-          ${callControl("Экран", sharing ? "ScreenShareOff" : "MonitorUp", "shareScreen", sharing)}
-          ${callControl("Настройки", "Settings", "devices", undefined, 'aria-haspopup="dialog"')}
           ${callControl("Участники", "Users", "callParticipants", M.state.callPanel === "participants")}
           ${callControl("Чат", "MessageCircle", "callChat", M.state.callPanel === "chat")}
           ${callControl("Выйти", "LogOut", "leaveCall", undefined, 'aria-haspopup="dialog"')}
@@ -814,24 +810,8 @@
           )
           .join("")}</div>`,
       ),
-    shareScreen: () => {
-      if (sharingMeeting === meetingKey()) {
-        M.actions.toggleCallShare();
-        return;
-      }
-      M.modal(
-        "Демонстрация экрана",
-        `<div class="stack"><p>Откройте пример демонстрации экрана.</p><button class="button primary" data-action="toggleCallShare">${I("MonitorUp")}Показать пример</button></div>`,
-      );
-    },
-    toggleCallShare: () => {
-      sharingMeeting = sharingMeeting === meetingKey() ? null : meetingKey();
-      M.closeModal();
-      M.render();
-      document.querySelector('.call-control[data-action="shareScreen"]')?.focus();
-    },
     focusCallParticipant: (button) => {
-      if (sharingMeeting === meetingKey() || button.getAttribute("aria-pressed") === "true") return;
+      if (button.getAttribute("aria-pressed") === "true") return;
       const id = button.dataset.personId;
       if (!M.meetingRoom().people.some((person) => person.id === id)) return;
       const { scrollLeft, scrollTop } = button.closest(".call-participant-strip");
