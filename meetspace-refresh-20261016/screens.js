@@ -477,7 +477,7 @@
   const callView = () => callViewPreferences.get(meetingKey()) || {};
   const setCallView = (changes) => callViewPreferences.set(meetingKey(), { ...callView(), ...changes });
   callCompact.addEventListener("change", () => {
-    if (M.state.screen === "call" && !callView().layout) M.render(false);
+    if (M.state.screen === "call") M.render(false);
   });
   let reconnectingMeeting = null;
   const callVideoImage = (className) =>
@@ -509,6 +509,88 @@
         </span>
       </button></li>`;
     }).join("")}</ul>`;
+  const callRailPageSize = 3;
+  const renderCallSpeakerRail = (participants) => {
+    const pages = Math.ceil(participants.length / callRailPageSize);
+    return `<div class="call-speaker-rail">
+      ${renderCallParticipantStrip(participants)}
+      ${pages > 1 ? `<div class="call-rail-pagination" role="group" aria-label="Страницы списка участников">${Array.from({ length: pages }, (_, index) =>
+        `<button type="button" class="call-rail-dot" aria-label="Страница ${index + 1} из ${pages}"></button>`
+      ).join("")}</div>` : ""}
+    </div>`;
+  };
+  function bindCallSpeakerRail() {
+    const rail = document.querySelector(".call-speaker-rail");
+    if (!rail) return;
+    const strip = rail.querySelector(".call-participant-strip");
+    const dots = [...rail.querySelectorAll(".call-rail-dot")];
+    if (!dots.length) return;
+
+    const maxScroll = () => strip.scrollWidth - strip.clientWidth;
+    const pageOffset = (index) => Math.min(maxScroll(),
+      strip.children[index * callRailPageSize].offsetLeft - strip.firstElementChild.offsetLeft);
+    const nearestPage = () => dots.reduce((nearest, _, index) =>
+      Math.abs(strip.scrollLeft - pageOffset(index)) < Math.abs(strip.scrollLeft - pageOffset(nearest)) ? index : nearest,
+    0);
+    const syncPage = () => {
+      if (!strip.isConnected) return;
+      const page = nearestPage();
+      dots.forEach((dot, index) => {
+        if (index === page) dot.setAttribute("aria-current", "true");
+        else dot.removeAttribute("aria-current");
+      });
+      if (callView().railPage !== page) setCallView({ railPage: page });
+    };
+    const showPage = (page) => strip.scrollTo({
+      left: pageOffset(page),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+
+    strip.scrollLeft = pageOffset(Math.min(callView().railPage ?? 0, dots.length - 1));
+    syncPage();
+    strip.addEventListener("scroll", syncPage, { passive: true });
+    dots.forEach((dot, index) => dot.addEventListener("click", () => showPage(index)));
+
+    let drag = null;
+    let blockClick = false;
+    strip.addEventListener("dragstart", (event) => event.preventDefault());
+    strip.addEventListener("pointerdown", (event) => {
+      blockClick = false;
+      if (event.pointerType !== "mouse" || event.button !== 0 || !maxScroll()) return;
+      drag = { id: event.pointerId, x: event.clientX, left: strip.scrollLeft, page: nearestPage() };
+    });
+    strip.addEventListener("pointermove", (event) => {
+      if (drag?.id !== event.pointerId || !(event.buttons & 1)) return;
+      const delta = drag.x - event.clientX;
+      if (!drag.active) {
+        if (Math.abs(delta) < 6) return;
+        drag.active = true;
+        strip.dataset.dragging = "true";
+        strip.setPointerCapture(event.pointerId);
+      }
+      strip.scrollLeft = drag.left + delta;
+    });
+    const endDrag = (event) => {
+      if (drag?.id !== event.pointerId) return;
+      if (drag.active) {
+        const delta = strip.scrollLeft - drag.left;
+        const page = Math.abs(delta) >= 28 ? drag.page + Math.sign(delta) : nearestPage();
+        blockClick = true;
+        delete strip.dataset.dragging;
+        showPage(Math.max(0, Math.min(dots.length - 1, page)));
+      }
+      drag = null;
+    };
+    strip.addEventListener("pointerup", endDrag);
+    strip.addEventListener("pointercancel", endDrag);
+    strip.addEventListener("lostpointercapture", endDrag);
+    strip.addEventListener("click", (event) => {
+      if (!blockClick || !event.detail) return;
+      blockClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+  }
   const renderCallSpeaker = (view, pinned, localAvatar) => {
     const isSelf = view.id === "self";
     const selfName = M.state.participantName || M.state.profileName || "Александр Соколов";
@@ -536,6 +618,7 @@
       ...participants.filter(({ id }) => id === "self"),
     ];
     const tiles = layout === "gallery" ? gallery : gallery.filter((person) => person !== featured);
+    const phoneSpeaker = layout === "speaker" && callCompact.matches;
     return `<div class="call-video-area" data-layout="${layout}">
       <div class="call-video-viewbar">
         <div class="call-layout-switch" role="group" aria-label="Вид видеовстречи">${callLayouts.map(({ id, label, icon }) =>
@@ -545,7 +628,7 @@
       </div>
       <div class="call-video-stage"><div class="call-video-stack">
         ${layout === "speaker" && featured ? renderCallSpeaker(featured, Boolean(pinned), localAvatar) : ""}
-        ${tiles.length ? renderCallParticipantStrip(tiles) : ""}
+        ${tiles.length ? (phoneSpeaker ? renderCallSpeakerRail(tiles) : renderCallParticipantStrip(tiles)) : ""}
       </div></div>
     </div>`;
   };
@@ -576,7 +659,10 @@
         </div></footer>
       </main>`;
     },
-    bind: () => M.bindMeetingChat(),
+    bind: () => {
+      M.bindMeetingChat();
+      bindCallSpeakerRail();
+    },
   };
   M.actions = {
     join: () =>

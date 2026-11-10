@@ -133,6 +133,81 @@
     border-radius: 12px;
   }
 
+  .call-speaker-rail {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .call-video-area[data-layout="speaker"] .call-speaker-rail .call-participant-strip {
+    display: flex;
+    justify-content: flex-start;
+    overflow: auto hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    user-select: none;
+  }
+
+  .call-speaker-rail .call-participant-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .call-video-area[data-layout="speaker"] .call-speaker-rail .call-participant-strip > li {
+    flex: 0 0 calc((100% - 2 * var(--call-tile-gap)) / 3);
+    width: auto;
+  }
+
+  .call-speaker-rail .call-participant-strip > li:nth-child(3n + 1) {
+    scroll-snap-align: start;
+  }
+
+  .call-video-area[data-layout="speaker"] .call-speaker-rail .call-participant-tile {
+    aspect-ratio: 1;
+    cursor: grab;
+  }
+
+  .call-video-area[data-layout="speaker"] .call-speaker-rail .call-participant-strip[data-dragging="true"] {
+    scroll-snap-type: none;
+    cursor: grabbing;
+  }
+
+  .call-speaker-rail .call-participant-strip[data-dragging="true"] .call-participant-tile {
+    cursor: grabbing;
+  }
+
+  .call-speaker-rail .call-tile-image {
+    object-fit: cover;
+  }
+
+  .call-rail-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .call-rail-dot {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  .call-rail-dot::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #82758b;
+  }
+
+  .call-rail-dot[aria-current="true"]::after {
+    background: var(--call-text);
+  }
+
   .call-participant-tile .avatar {
     width: clamp(33px, 11cqw, 50px);
     height: auto;
