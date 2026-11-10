@@ -188,6 +188,9 @@
   min-width: 0;
 }
 .call-video-stack:not(:has(.call-participant-strip)) { --call-strip-reserve: 0px; }
+.call-video-stack:has(.call-rail-pagination) {
+  --call-strip-reserve: calc(var(--call-tile-height) + var(--call-stack-gap) + 30px);
+}
 .call-video-frame {
   /* Reserve height for the participant strip and its horizontal scrollbar. */
   width: 100%;
@@ -384,6 +387,81 @@ button.call-speaker-badge {
 }
 .call-participant-tile[data-speaking="true"] .call-tile-caption svg {
   color: var(--call-speaking);
+}
+
+.call-speaker-rail {
+  width: min(100%, calc(3 * var(--call-tile-height) * 16 / 9 + 2 * var(--call-tile-gap)));
+  min-width: 0;
+}
+
+.call-video-area[data-layout="speaker"] .call-speaker-rail .call-participant-strip {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0;
+  overflow: auto hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  user-select: none;
+}
+
+.call-speaker-rail .call-participant-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.call-video-area[data-layout="speaker"] .call-speaker-rail .call-participant-strip > li {
+  flex: 0 0 calc((100% - 2 * var(--call-tile-gap)) / 3);
+  width: auto;
+}
+
+.call-speaker-rail .call-participant-strip > li:nth-child(3n + 1) {
+  scroll-snap-align: start;
+}
+
+.call-speaker-rail .call-participant-tile {
+  height: auto;
+}
+
+.call-speaker-rail:has(.call-rail-pagination) .call-participant-tile {
+  cursor: grab;
+}
+
+.call-video-area[data-layout="speaker"] .call-speaker-rail .call-participant-strip[data-dragging="true"] {
+  scroll-snap-type: none;
+  cursor: grabbing;
+}
+
+.call-speaker-rail .call-participant-strip[data-dragging="true"] .call-participant-tile {
+  cursor: grabbing;
+}
+
+.call-rail-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.call-rail-dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.call-rail-dot::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #82758b;
+}
+
+.call-rail-dot[aria-current="true"]::after {
+  background: var(--call-text);
 }
 
 @media (min-width: 780px) {

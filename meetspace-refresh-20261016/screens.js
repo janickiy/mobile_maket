@@ -477,7 +477,7 @@
   const callView = () => callViewPreferences.get(meetingKey()) || {};
   const setCallView = (changes) => callViewPreferences.set(meetingKey(), { ...callView(), ...changes });
   callCompact.addEventListener("change", () => {
-    if (M.state.screen === "call") M.render(false);
+    if (M.state.screen === "call" && !callView().layout) M.render(false);
   });
   let reconnectingMeeting = null;
   const callVideoImage = (className) =>
@@ -618,7 +618,6 @@
       ...participants.filter(({ id }) => id === "self"),
     ];
     const tiles = layout === "gallery" ? gallery : gallery.filter((person) => person !== featured);
-    const phoneSpeaker = layout === "speaker" && callCompact.matches;
     return `<div class="call-video-area" data-layout="${layout}">
       <div class="call-video-viewbar">
         <div class="call-layout-switch" role="group" aria-label="Вид видеовстречи">${callLayouts.map(({ id, label, icon }) =>
@@ -628,7 +627,7 @@
       </div>
       <div class="call-video-stage"><div class="call-video-stack">
         ${layout === "speaker" && featured ? renderCallSpeaker(featured, Boolean(pinned), localAvatar) : ""}
-        ${tiles.length ? (phoneSpeaker ? renderCallSpeakerRail(tiles) : renderCallParticipantStrip(tiles)) : ""}
+        ${tiles.length ? (layout === "speaker" ? renderCallSpeakerRail(tiles) : renderCallParticipantStrip(tiles)) : ""}
       </div></div>
     </div>`;
   };
