@@ -155,8 +155,7 @@
   ];
   M.chatMemberDirectory = memberDirectory;
   const member = (id) => memberDirectory().find((person) => person.id === id);
-  const groupCount = (c) => {
-    const n = c.members.length;
+  const participantCount = (n) => {
     const word =
       n % 100 >= 11 && n % 100 <= 14
         ? "участников"
@@ -171,7 +170,7 @@
     `<span class="chat-avatar ${c.kind === "group" ? "is-group" : ""}">${avatar(M.chatAvatarMarkup?.(c) || E(c.initials), c.tone)}${c.kind === "group" ? `<span class="group-avatar-badge" role="img" aria-label="Групповой чат">${I("Users")}</span>` : ""}</span>`;
   const groupMeta = (c) =>
     c.kind === "group"
-      ? `<span class="chat-group-meta">Группа · ${groupCount(c)}</span>`
+      ? `<span class="chat-group-meta">Группа · ${participantCount(c.members.length)}</span>`
       : "";
   const meetingRow = (m) =>
     `<button class="agenda-row" data-action="meeting" data-title="${E(m.title)}" data-time="${m.time}" data-date="${m.date || "2026-10-12"}"><span class="agenda-time">${m.time}<small>${m.end}</small></span><span class="agenda-mark ${m.tone}"></span><span class="agenda-detail"><h3>${E(m.title)}</h3><p>${m.meta}</p></span>${I("ChevronRight")}</button>`;
@@ -208,7 +207,7 @@
     const isGroup = c.kind === "group";
     const firstAuthor = isGroup ? member(c.members[1]) : c;
     const secondAuthor = isGroup ? member(c.members[2] || c.members[1]) : c;
-    return `<section class="thread"><header class="thread-header"><button class="icon-button phone-back" data-go="messages" aria-label="Назад к чатам">${I("ArrowLeft")}</button>${chatAvatar(c)}<div><h3>${E(c.name)}</h3><p>${isGroup ? `Группа · ${groupCount(c)}` : "В сети"}</p></div><span class="spacer"></span>${!isGroup ? `<button class="icon-button personal-call-trigger" data-action="startPersonalCall" data-contact="${E(c.id)}" aria-label="Позвонить: ${E(c.name)}">${I("Phone")}</button>` : ""}<button class="icon-button" data-action="chatInfo" aria-label="Информация о чате">${I("Ellipsis")}</button></header>${M.renderPersonalCallBanner?.(c) || ""}${c.created ? "" : `<div class="thread-banner">${I("Pin")}<span>Встречаемся в 10:00 · Дизайн-синхронизация</span></div>`}<div class="thread-log" id="thread-log">${c.created ? `<div class="chat-date">Вы создали группу</div>${M.state.messages.some((message) => message.chat === c.id) ? "" : `<div class="group-welcome">${chatAvatar(c)}<h3>${E(c.name)}</h3><p>${groupCount(c)} · Всё готово к общению.<br/>Напишите первое сообщение.</p></div>`}` : `<div class="chat-date">Сегодня, 12 октября</div><div class="chat-message">${avatar(E(firstAuthor.initials), firstAuthor.tone)}<div><div class="bubble"><h4>${E(firstAuthor.name)}</h4>Доброе утро! Собрала материалы к встрече. Посмотрите, когда будет минутка.<div class="chat-file">${I("FileText")}<div><strong>Обзор продукта.pdf</strong><span>2,4 МБ · PDF</span></div><button class="icon-button" data-action="attachment" aria-label="Открыть файл">${I("ArrowDown")}</button></div><small>09:32</small></div><button class="chat-reaction" data-action="reaction" aria-label="Отметить сообщение полезным">${I("Check")}<span>${M.state.reacted ? "3" : "2"}</span></button></div></div><div class="chat-message mine"><div class="bubble">Спасибо! Посмотрю перед созвоном. Есть пара идей по навигации.<small>09:34 · ✓✓</small></div></div><div class="chat-message">${avatar(E(secondAuthor.initials), secondAuthor.tone)}<div class="bubble"><h4>${E(secondAuthor.name)}</h4>Отлично, давайте начнём с них. До встречи!<small>09:38</small></div></div>`}${M.state.messages
+    return `<section class="thread"><header class="thread-header"><button class="icon-button phone-back" data-go="messages" aria-label="Назад к чатам">${I("ArrowLeft")}</button>${chatAvatar(c)}<div><h3>${E(c.name)}</h3><p>${isGroup ? `Группа · ${participantCount(c.members.length)}` : "В сети"}</p></div><span class="spacer"></span>${!isGroup ? `<button class="icon-button personal-call-trigger" data-action="startPersonalCall" data-contact="${E(c.id)}" aria-label="Позвонить: ${E(c.name)}">${I("Phone")}</button>` : ""}<button class="icon-button" data-action="chatInfo" aria-label="Информация о чате">${I("Ellipsis")}</button></header>${M.renderPersonalCallBanner?.(c) || ""}${c.created ? "" : `<div class="thread-banner">${I("Pin")}<span>Встречаемся в 10:00 · Дизайн-синхронизация</span></div>`}<div class="thread-log" id="thread-log">${c.created ? `<div class="chat-date">Вы создали группу</div>${M.state.messages.some((message) => message.chat === c.id) ? "" : `<div class="group-welcome">${chatAvatar(c)}<h3>${E(c.name)}</h3><p>${participantCount(c.members.length)} · Всё готово к общению.<br/>Напишите первое сообщение.</p></div>`}` : `<div class="chat-date">Сегодня, 12 октября</div><div class="chat-message">${avatar(E(firstAuthor.initials), firstAuthor.tone)}<div><div class="bubble"><h4>${E(firstAuthor.name)}</h4>Доброе утро! Собрала материалы к встрече. Посмотрите, когда будет минутка.<div class="chat-file">${I("FileText")}<div><strong>Обзор продукта.pdf</strong><span>2,4 МБ · PDF</span></div><button class="icon-button" data-action="attachment" aria-label="Открыть файл">${I("ArrowDown")}</button></div><small>09:32</small></div><button class="chat-reaction" data-action="reaction" aria-label="Отметить сообщение полезным">${I("Check")}<span>${M.state.reacted ? "3" : "2"}</span></button></div></div><div class="chat-message mine"><div class="bubble">Спасибо! Посмотрю перед созвоном. Есть пара идей по навигации.<small>09:34 · ✓✓</small></div></div><div class="chat-message">${avatar(E(secondAuthor.initials), secondAuthor.tone)}<div class="bubble"><h4>${E(secondAuthor.name)}</h4>Отлично, давайте начнём с них. До встречи!<small>09:38</small></div></div>`}${M.state.messages
       .filter((m) => m.chat === c.id)
       .map(
         (m) =>
@@ -469,56 +468,86 @@
   const callControl = (label, icon, action, active, extra = "") =>
     `<button type="button" class="call-control ${action === "leaveCall" ? "leave" : ""}" data-action="${action}" aria-label="${label}" title="${label}" ${active === undefined ? "" : `aria-pressed="${active}"`} ${extra}>${I(icon)}<span>${label}</span></button>`;
   const meetingKey = () => M.state.meetingMeta?.id || M.state.meetingTitle || "design";
-  const focusedCallParticipants = new Map();
+  const callViewPreferences = new Map();
+  const callCompact = window.matchMedia("(max-width: 779px)");
+  const callLayouts = [
+    { id: "gallery", label: "Сетка", icon: "LayoutGrid" },
+    { id: "speaker", label: "Выступающий", icon: "UserRound" },
+  ];
+  const callView = () => callViewPreferences.get(meetingKey()) || {};
+  const setCallView = (changes) => callViewPreferences.set(meetingKey(), { ...callView(), ...changes });
+  callCompact.addEventListener("change", () => {
+    if (M.state.screen === "call" && !callView().layout) M.render(false);
+  });
   let reconnectingMeeting = null;
   const callVideoImage = (className) =>
     `<img class="${className}" src="assets/call-camera-demo.jpg" alt="" width="1280" height="720"/>`;
   const callParticipantView = (person, localAvatar) => {
     const self = person.id === "self";
-    const tone = { self: "blue", anna: "orange", maria: "mint" }[person.id] || "";
+    const tone = { self: "blue", anna: "amber", maria: "mint", dmitry: "blue" }[person.id] || "violet";
     return {
+      id: person.id,
       name: self ? "Вы" : person.name,
-      avatar: avatar(self ? localAvatar : E(person.initials), tone),
+      tone,
+      avatar: avatar(self ? localAvatar : E(person.initials), tone === "amber" ? "orange" : tone),
       video: person.id === "dmitry" && !person.camera,
       mic: self ? M.state.mic : person.id === "dmitry" && !person.mute,
+      speaking: person.id === "dmitry" && !person.mute,
     };
   };
-  const renderCallParticipantStrip = (people, featuredId, localAvatar) =>
-    `<ul class="call-participant-strip" role="list" aria-label="Участники видеовстречи">${people.map((person) => {
-      const view = callParticipantView(person, localAvatar);
-      const label = `${view.name} · микрофон ${view.mic ? "включён" : "выключен"}`;
+  const renderCallParticipantStrip = (participants) =>
+    `<ul class="call-participant-strip" data-count="${participants.length}" role="list" aria-label="Участники видеовстречи">${participants.map((view) => {
+      const status = view.speaking ? "говорит" : `микрофон ${view.mic ? "включён" : "выключен"}`;
+      const label = `Показать крупно: ${view.name} · ${status}`;
       return `<li><button type="button" class="call-participant-tile" data-action="focusCallParticipant"
-        data-person-id="${E(person.id)}" aria-pressed="${featuredId === person.id}"
+        data-person-id="${E(view.id)}" data-tone="${view.tone}" data-speaking="${view.speaking}"
         aria-label="${E(label)}" title="${E(label)}">
         ${view.video ? callVideoImage("call-tile-image") : view.avatar}
         <span class="call-tile-caption">
           <span>${E(view.name)}</span>
-          ${I(view.mic ? "Mic" : "MicOff")}
+          ${I(view.speaking ? "AudioLines" : view.mic ? "Mic" : "MicOff")}
         </span>
       </button></li>`;
     }).join("")}</ul>`;
-  const renderCallVideo = () => {
-    const people = M.meetingRoom().people;
-    const speaker = people.find((person) => person.id === "dmitry") ||
-      people.find((person) => person.id !== "self") || people[0];
-    const featured = people.find((person) => person.id === focusedCallParticipants.get(meetingKey())) || speaker;
-    const tiles = [speaker, ...people.filter((person) => person !== speaker && person.id !== "self"),
-      ...people.filter((person) => person !== speaker && person.id === "self")];
+  const renderCallSpeaker = (view, pinned, localAvatar) => {
+    const isSelf = view.id === "self";
     const selfName = M.state.participantName || M.state.profileName || "Александр Соколов";
-    const initials = M.profileInitials?.() || "АС";
-    const localAvatar = M.profileAvatarMarkup?.(initials) || E(initials);
-    const view = callParticipantView(featured, localAvatar);
-    const isSelf = featured.id === "self";
     const name = isSelf ? `${selfName} · вы` : view.name;
     const icon = view.mic ? "Mic" : "MicOff";
-    return `<div class="call-video-area"><div class="call-video-stack">
-      <section class="call-video-frame" aria-label="Видео · ${E(name)}">
+    return `<section class="call-video-frame" data-tone="${view.tone}" aria-label="Видео · ${E(name)}">
         ${view.video ? callVideoImage("call-video-image") : view.avatar}
+        ${pinned ? `<button type="button" class="call-speaker-badge" data-action="unpinCallParticipant" aria-label="Открепить участника">${I("Pin")}Открепить</button>`
+          : view.speaking ? `<span class="call-speaker-badge is-speaking">${I("AudioLines")}Говорит</span>` : ""}
         ${M.state.camera && !isSelf ? `<div class="call-self-view" aria-label="Предпросмотр вашей камеры">${avatar(localAvatar)}<span>Вы</span></div>` : ""}
         <div class="call-video-label"><span>${E(name)}</span>${I(icon)}</div>
-      </section>
-      ${renderCallParticipantStrip(tiles, featured.id, localAvatar)}
-    </div></div>`;
+      </section>`;
+  };
+  const renderCallVideo = () => {
+    const { layout = callCompact.matches ? "speaker" : "gallery", pinnedId } = callView();
+    const initials = M.profileInitials?.() || "АС";
+    const localAvatar = M.profileAvatarMarkup?.(initials) || E(initials);
+    const participants = M.meetingRoom().people.map((person) => callParticipantView(person, localAvatar));
+    const pinned = participants.find(({ id }) => id === pinnedId);
+    const speaker = participants.find(({ speaking }) => speaking);
+    const featured = pinned || speaker || participants.find(({ id }) => id !== "self") || participants[0];
+    const gallery = [
+      ...(speaker ? [speaker] : []),
+      ...participants.filter((person) => person !== speaker && person.id !== "self"),
+      ...participants.filter(({ id }) => id === "self"),
+    ];
+    const tiles = layout === "gallery" ? gallery : gallery.filter((person) => person !== featured);
+    return `<div class="call-video-area" data-layout="${layout}">
+      <div class="call-video-viewbar">
+        <div class="call-layout-switch" role="group" aria-label="Вид видеовстречи">${callLayouts.map(({ id, label, icon }) =>
+          `<button type="button" class="call-layout-option" data-action="setCallLayout" data-layout="${id}" aria-pressed="${layout === id}">${I(icon)}<span>${label}</span></button>`
+        ).join("")}</div>
+        <span class="call-view-meta">${I("Users")}<span>${participantCount(participants.length)}</span></span>
+      </div>
+      <div class="call-video-stage"><div class="call-video-stack">
+        ${layout === "speaker" && featured ? renderCallSpeaker(featured, Boolean(pinned), localAvatar) : ""}
+        ${tiles.length ? renderCallParticipantStrip(tiles) : ""}
+      </div></div>
+    </div>`;
   };
   M.screens.call = {
     title: "Видеовстреча",
@@ -610,7 +639,7 @@
       const isGroup = c.kind === "group";
       M.modal(
         isGroup ? "О группе" : "О контакте",
-        `<div class="stack"><div class="group-info-heading">${chatAvatar(c)}<div><h3>${E(c.name)}</h3><p>${isGroup ? `Группа · ${groupCount(c)}` : "Личная переписка"}</p></div></div>${
+        `<div class="stack"><div class="group-info-heading">${chatAvatar(c)}<div><h3>${E(c.name)}</h3><p>${isGroup ? `Группа · ${participantCount(c.members.length)}` : "Личная переписка"}</p></div></div>${
           isGroup
             ? `${M.renderGroupEditEntry?.(c) || ""}${c.description ? `<p class="ge-description">${E(c.description)}</p>` : ""}${M.renderGroupAvatarEditor?.(c) || ""}<h3 class="group-members-title">Участники</h3><div class="group-info-members">${c.members
                 .map((id) => {
@@ -810,17 +839,24 @@
           )
           .join("")}</div>`,
       ),
+    setCallLayout: (button) => {
+      const layout = button.dataset.layout;
+      if (button.getAttribute("aria-pressed") === "true" || !callLayouts.some(({ id }) => id === layout)) return;
+      setCallView({ layout });
+      M.render(false);
+      document.querySelector('.call-layout-option[aria-pressed="true"]')?.focus();
+    },
     focusCallParticipant: (button) => {
-      if (button.getAttribute("aria-pressed") === "true") return;
       const id = button.dataset.personId;
       if (!M.meetingRoom().people.some((person) => person.id === id)) return;
-      const { scrollLeft, scrollTop } = button.closest(".call-participant-strip");
-      focusedCallParticipants.set(meetingKey(), id);
+      setCallView({ layout: "speaker", pinnedId: id });
       M.render(false);
-      const strip = document.querySelector(".call-participant-strip");
-      strip.scrollLeft = scrollLeft;
-      strip.scrollTop = scrollTop;
-      strip.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+      document.querySelector('[data-action="unpinCallParticipant"]')?.focus();
+    },
+    unpinCallParticipant: () => {
+      setCallView({ pinnedId: null });
+      M.render(false);
+      document.querySelector('.call-layout-option[aria-pressed="true"]')?.focus();
     },
     callReconnect: () => {
       const key = meetingKey();
