@@ -111,7 +111,7 @@
     },
     {
       id: "deploy",
-      label: "Создание сервера",
+      label: "Адрес VPS",
       group: "onboarding",
       title: "Ваш сервер. Ваше пространство.",
       description: "Понятная настройка собственного сервера для вашей команды.",
@@ -124,13 +124,16 @@
       description:
         "Подтвердите отпечаток ключа перед первым подключением к серверу.",
     },
+    { id: "ssh-auth", label: "Доступ по SSH", group: "onboarding", title: "Доступ после проверки ключа.", description: "Пароль или приватный ключ, затем диагностика VPS без изменений." },
     {
       id: "preflight",
-      label: "Проверка сервера",
+      label: "Диагностика VPS",
       group: "onboarding",
       title: "Убедимся, что всё готово.",
       description: "Проверка соединения и ресурсов перед установкой MeetSpace.",
     },
+    { id: "install-options", label: "Параметры установки", group: "onboarding", title: "Все параметры вашего пространства.", description: "Docker-образы или сборка на сервере, HTTPS, админка и отправка email." },
+    { id: "install-plan", label: "План установки", group: "onboarding", title: "Проверьте план изменений.", description: "Версия, ресурсы, сетевые порты и отдельные подтверждения перед установкой." },
     {
       id: "install",
       label: "Установка",
@@ -173,7 +176,7 @@
   let portrait = params.get("orientation") === "portrait";
   const $ = (id) => document.getElementById(id);
   const frames = [$("phone-preview"), $("tablet-preview")];
-  const initialPreview = `preview.html?rev=call-speaker-rail-v2&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
+  const initialPreview = `preview.html?rev=20261114-installer-parity&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
   frames.forEach((frame) => {
     if (frame.getAttribute("src") !== initialPreview)
       frame.src = initialPreview;
@@ -204,7 +207,7 @@
     if (current.id === "settings" && section) url.searchParams.set("section", section);
     else url.searchParams.delete("section");
     history.replaceState(null, "", url);
-    $("open-screen").href = `preview.html?rev=call-speaker-rail-v2&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
+    $("open-screen").href = `preview.html?rev=20261114-installer-parity&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
   }
   function notifyFrames(except) {
     frames.forEach((frame) => {
