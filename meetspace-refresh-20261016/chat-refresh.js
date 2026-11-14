@@ -165,7 +165,7 @@
     const item = message(id); if (!item || item.deleted) return;
     const article=document.getElementById('cr-'+id), anchor=article?.querySelector('.bubble')?.getBoundingClientRect();
     if(!anchor)return;
-    const options = [['Reply','chatRefreshReply','Ответить'],['Copy','chatRefreshCopy','Копировать'],['ArrowRight','chatRefreshForward','Переслать'],['Pin','chatRefreshPin',data().pins.includes(id)?'Открепить':'Закрепить']];
+    const options = [['Reply','chatRefreshReply','Ответить'],['Copy','chatRefreshCopy','Копировать'],['ArrowRight','chatRefreshForward','Переслать'],['Share2','chatRefreshShare','Поделиться'],['Pin','chatRefreshPin',data().pins.includes(id)?'Открепить':'Закрепить']];
     if(item.own)options.push(['Pencil','chatRefreshEdit','Изменить'],['Trash2','chatRefreshDelete','Удалить']);
     M.closeModal();M.opener=article;
     document.getElementById('dialog-root').innerHTML=`<div class="modal-backdrop cr-message-backdrop"><section class="modal cr-message-popover" role="dialog" aria-modal="true" aria-labelledby="cr-message-title"><div class="cr-context-caption"><h2 id="cr-message-title">Действия с сообщением</h2><button class="icon-button" data-close aria-label="Закрыть действия с сообщением">${I('X')}</button></div><div class="cr-quick-reactions" role="group" aria-label="Быстрые реакции">${reactions.map(([emoji,label])=>`<button data-action="chatRefreshReaction" data-id="${E(id)}" data-emoji="${E(emoji)}" aria-label="${E(label)} ${emoji}" aria-pressed="${reactionOf(item)===emoji}">${emoji}</button>`).join('')}</div><div class="cr-selected-preview ${item.own?'mine':''}"><strong>${E(author(item))}</strong><p>${E(item.text)}</p>${item.attachments?.length?`<span class="cr-preview-attachment">${I('Paperclip')}${E(item.attachments[0].name)}${item.attachments.length>1?` · ещё ${item.attachments.length-1}`:''}</span>`:''}<small>${item.edited?'изменено · ':''}${E(item.time)}${item.own?' · ✓✓':''}</small></div><div class="cr-context-actions">${options.map(([icon,action,label])=>`<button class="${action==='chatRefreshDelete'?'cr-danger':''}" data-action="${action}" data-id="${E(id)}">${I(icon)}<span>${label}</span></button>`).join('')}</div></section></div>`;
@@ -180,6 +180,39 @@
     const openedAt=performance.now();
     backdrop.addEventListener('click',event=>{if(event.target===backdrop&&performance.now()-openedAt>300)M.closeModal();});
     popover.querySelector('.cr-context-actions button')?.focus({preventScroll:true});
+  }
+  async function shareMessage(id) {
+    const item = message(id), key = scope();
+    if (!item || item.deleted) return;
+    const attachments = item.attachments || [];
+    const text = [item.text, attachments.map(file => file.name).join('\n')].filter(Boolean).join('\n\n');
+    const payload = {title: 'Сообщение в MeetSpace', text};
+    const localFiles = attachments.map(file => files.get(file.id));
+    M.closeModal();
+    if (navigator.share) {
+      try {
+        if (localFiles.length && localFiles.every(Boolean) && navigator.canShare?.({files: localFiles})) payload.files = localFiles;
+        await navigator.share(payload);
+        return;
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+      }
+    }
+    if (scope() !== key || item.deleted) return;
+    M.modal('Поделиться сообщением', `<div class="stack"><label class="field">Текст сообщения<textarea id="cr-share-text" readonly rows="5">${E(text)}</textarea></label>${attachments.length ? '<p class="muted">Копируется текст и названия вложений.</p>' : ''}<button id="cr-share-copy" class="button primary">${I('Copy')}Скопировать текст</button><button class="button secondary" data-close>Закрыть</button></div>`, () => {
+      document.getElementById('cr-share-copy').onclick = async () => {
+        const field = document.getElementById('cr-share-text');
+        try {
+          await navigator.clipboard.writeText(text);
+          if (field?.isConnected) M.closeModal();
+          M.toast('Текст скопирован');
+        } catch {
+          if (!field?.isConnected) return;
+          field.focus(); field.select();
+          M.toast('Скопируйте выделенный текст');
+        }
+      };
+    });
   }
   function showForward(id) {
     const item=message(id);if(!item||item.deleted)return;
@@ -293,6 +326,7 @@
     chatRefreshCancel: () => {data().reply = null; data().editing = null; data().editText = ''; redraw({focus: true});},
     chatRefreshReaction: button => {const item=message(button.dataset.id);if(!item||item.deleted)return;const emoji=button.dataset.emoji||reactionOf(item)||'👍';if(!reactions.some(([value])=>value===emoji))return;item.reaction=reactionOf(item)===emoji?false:emoji;M.closeModal();redraw();},
     chatRefreshForward: button => showForward(button.dataset.id),
+    chatRefreshShare: button => shareMessage(button.dataset.id),
     chatRefreshForwardTo: forwardTo,
     chatRefreshPin: button => togglePin(button.dataset.id),
     chatRefreshUnpin: button => togglePin(button.dataset.id, true),
