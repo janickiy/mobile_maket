@@ -1,8 +1,9 @@
 /* Notification centre for the mobile and tablet design prototype. */
 .icon-button.nt-bell { position: relative; isolation: isolate; flex-shrink: 0; overflow: visible; }
-.nt-bell > svg { pointer-events: none; }
+/* Optical alignment: the bell's dome and unread badge sit above its SVG centre. */
+.nt-bell > svg { pointer-events: none; transform: translateY(2px); }
 .nt-bell[aria-expanded="true"] { color: var(--accent); background: var(--accent-soft); }
-.nt-badge { position: absolute; top: 2px; right: 1px; display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 4px; border: 2px solid var(--bg); border-radius: 999px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; pointer-events: none; }
+.nt-badge { position: absolute; top: 4px; right: 1px; display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 4px; border: 2px solid var(--bg); border-radius: 999px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; pointer-events: none; }
 .nt-badge[hidden] { display: none; }
 
 /* The panel is anchored below the header; only the event list scrolls. */
