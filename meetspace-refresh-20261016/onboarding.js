@@ -13,7 +13,6 @@
       domain: "",
       auth: "password",
       installMode: "source",
-      installAdmin: true,
       adminUsername: "admin",
       adminPort: "8081",
       stage: 0,
@@ -23,8 +22,8 @@
     '<img src="assets/brand-mark.svg" alt="" width="32" height="32"><span>MeetSpace<span class="on-logo-dot">.</span></span>';
   const demo = (text) =>
     `<div class="on-demo">${I("FlaskConical")}<span><strong>Демо-прототип</strong> · ${text || "Все проверки и результаты — пример сценария."}</span></div>`;
-  const progress = (n, label = "Подключение сервера") =>
-    `<div class="on-step-label"><span>${e(label)}</span><span>0${n} <span class="on-step-sep">/ 05</span></span></div><div class="on-progress-track">${[1, 2, 3, 4, 5].map((v) => `<i class="${v <= n ? "is-done" : ""}"></i>`).join("")}</div>`;
+  const progress = (n, label = "Подключение сервера", step = "") =>
+    `<div class="on-step-label"><span>${e(label)}</span><span>${step ? e(step) : `0${n} <span class="on-step-sep">/ 05</span>`}</span></div><div class="on-progress-track">${[1, 2, 3, 4, 5].map((v) => `<i class="${v <= n ? "is-done" : ""}"></i>`).join("")}</div>`;
   const marks = [
     { icon: "Video", label: "Встречи", text: "Когда важен живой разговор" },
     {
@@ -43,7 +42,18 @@
   const side = (install = false) =>
     `<aside class="on-side"><a class="on-logo" href="#welcome" data-go="welcome">${logo()}</a><div class="on-side-body"><span class="on-kicker">${install ? "ВАШ СЕРВЕР. ВАШИ ПРАВИЛА." : "БЛИЖЕ К КОМАНДЕ."}</span><h2>${install ? "Своё пространство.<br>Полный контроль." : "Быть на одной<br>волне."}</h2><p>${install ? "Подключите удалённый сервер, а мы покажем каждый шаг настройки." : "Встречи, сообщения и идеи —<br>в одном пространстве."}</p>${visual()}</div><div class="on-side-footer"><span>${I("ShieldCheck")} На вашей инфраструктуре</span><span>MeetSpace для Android</span></div></aside>`;
   const frame = (content, opts = {}) =>
-    `<div class="on-layout ${opts.welcome ? "on-layout-welcome" : ""} ${opts.account ? "on-layout-account" : ""}">${side(opts.install)}<main class="on-main"><div class="on-mobile-brand"><a class="on-logo" href="#welcome" data-go="welcome">${logo()}</a><span class="on-platform">ANDROID</span></div>${opts.back ? `<button class="on-back" data-go="${opts.back}">${I("ArrowLeft")} ${opts.backLabel || "Назад"}</button>` : ""}<div class="on-content">${content}</div><div class="on-bottom-note">${I("LockKeyhole")} ${opts.install ? "Данные доступа не сохраняются в макете" : "Ваше общение остаётся в вашем пространстве"}</div></main></div>`;
+    `<div class="on-layout ${opts.welcome ? "on-layout-welcome" : ""} ${opts.account ? "on-layout-account" : ""}">
+      ${side(opts.install)}
+      <main class="on-main">
+        <div class="on-mobile-brand">
+          <a class="on-logo" href="#welcome" data-go="welcome">${logo()}</a>
+          ${opts.install ? "" : '<span class="on-platform">ANDROID</span>'}
+        </div>
+        ${opts.back ? `<button class="on-back" data-go="${opts.back}">${I("ArrowLeft")} ${opts.backLabel || "Назад"}</button>` : ""}
+        <div class="on-content">${content}</div>
+        ${opts.install ? "" : `<div class="on-bottom-note">${I("LockKeyhole")} Ваше общение остаётся в вашем пространстве</div>`}
+      </main>
+    </div>`;
   const heading = (eyebrow, title, subtitle) =>
     `<div class="on-heading"><span class="on-kicker">${eyebrow}</span><h1>${title}</h1><p>${subtitle}</p></div>`;
   const field = (label, name, value, placeholder, other = "") =>

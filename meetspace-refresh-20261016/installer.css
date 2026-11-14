@@ -73,6 +73,8 @@
 .on-layout.ins-layout .on-heading { margin-bottom: 28px; }
 .on-layout.ins-layout .on-heading h1 { margin: 10px 0 12px; font-size: 32px; line-height: 1.2; letter-spacing: -1px; text-wrap: balance; }
 .on-layout.ins-layout .on-heading p { max-width: 600px; font-size: var(--ins-body); line-height: 1.65; }
+.on-layout.ins-layout .ins-verification-heading strong { color: var(--ink); }
+.on-layout.ins-layout .ins-verification-heading p + p { margin-top: 8px; }
 .on-layout.ins-layout .on-kicker,
 .on-layout.ins-layout .on-step-label { font-size: 11px; line-height: 1.5; letter-spacing: 1.2px; }
 .on-layout.ins-layout .on-step-label { gap: 14px; }
@@ -311,7 +313,7 @@
 .on-layout.ins-layout .on-install-mode .on-mode-icon { background: var(--bg); color: var(--muted); }
 .on-layout.ins-layout .on-install-mode:has(input:checked) .on-mode-icon { background: var(--surface); color: var(--accent); }
 .on-layout.ins-layout #ins-images-note { margin-top: 16px; }
-.on-layout.ins-layout :is(#ins-admin-fields, #ins-smtp-fields) { padding-top: 20px; border-top: 1px solid var(--line); }
+.on-layout.ins-layout #ins-smtp-fields { padding-top: 20px; border-top: 1px solid var(--line); }
 .on-layout.ins-layout .button.primary { box-shadow: 0 3px 8px color-mix(in srgb, var(--accent) 16%, transparent); }
 .on-layout.ins-layout .button:disabled { box-shadow: none; }
 .on-layout.ins-layout .ins-section-title > svg { margin-right: 6px; vertical-align: -3px; color: var(--accent); }

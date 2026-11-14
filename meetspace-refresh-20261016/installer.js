@@ -8,7 +8,7 @@
     smtpFrom: "", smtpUsername: "", smtpTls: "tls", resourceProfile: "standard", dockerAction: "install",
     accessAvailable: false, trustedEndpoint: "", trustStatus: "new", diagnosticScenario: "ready",
     hasJob: false, jobStatus: "running", stage: 0, detailsExpanded: false, planExpired: false,
-    statusKnown: true, stale: false, reconnecting: false, notice: "", jobId: "demo-install-001", jobCommit: "", jobError: "", accessUntil: 0, authScenario: "ready",
+    statusKnown: true, stale: false, reconnecting: false, notice: "", jobId: "demo-install-001", jobCommit: "", jobError: "", jobDiscovered: false, planCheckResult: "missing", accessUntil: 0, authScenario: "ready",
     rotatedKey: false, checking: false, checkingNext: "", checkingLabel: "", checkingAccess: false, imageStep: "download",
   };
   for (const [key, value] of Object.entries(defaults)) if (!(key in S())) S()[key] = value;
@@ -35,8 +35,8 @@
   };
   window.MSInstaller = { M, I, e, S, frame, heading, field, progress, demo, showError, secretField, bindSecrets, register, go, notify, defaults };
 
-  const publicFields = ['server', 'host', 'port', 'username', 'domain', 'auth', 'installMode', 'installAdmin', 'adminUsername', 'adminPort', ...Object.keys(defaults)];
-  const enums = { auth: ['password', 'key'], installMode: ['source', 'images'], certificateMode: ['letsencrypt', 'custom'], smtpTls: ['tls', 'starttls'], resourceProfile: ['standard', 'compact-test'], dockerAction: ['install', 'plugins', 'reuse'], trustStatus: ['new', 'changed'], diagnosticScenario: ['ready', 'compact', 'blocked', 'unknown'], jobStatus: ['running', 'cancel_requested', 'cancelled', 'needs_recovery', 'failed', 'completed'], authScenario: ['ready', 'auth-error', 'network-error'], imageStep: ['download', 'verify', 'load'] };
+  const publicFields = ['server', 'host', 'port', 'username', 'domain', 'auth', 'installMode', 'adminUsername', 'adminPort', ...Object.keys(defaults)];
+  const enums = { auth: ['password', 'key'], installMode: ['source', 'images'], certificateMode: ['letsencrypt', 'custom'], smtpTls: ['tls', 'starttls'], resourceProfile: ['standard', 'compact-test'], dockerAction: ['install', 'plugins', 'reuse'], trustStatus: ['new', 'changed'], diagnosticScenario: ['ready', 'compact', 'blocked', 'unknown'], jobStatus: ['running', 'cancel_requested', 'cancelled', 'needs_recovery', 'failed', 'completed'], authScenario: ['ready', 'auth-error', 'network-error'], imageStep: ['download', 'verify', 'load'], planCheckResult: ['existing', 'missing'] };
   const publicServerOrigin = value => {
     try {
       const url = new URL(value);
@@ -59,7 +59,8 @@
   const error = '<div class="on-form-error" role="alert" hidden></div>';
   const button = (label, attrs = '', secondary = false) => `<button class="button ${secondary ? 'secondary' : 'primary'} wide" ${attrs}>${label}</button>`;
   const endpoint = () => `<p class="ins-endpoint">${e(S().host || 'VPS')}<span>SSH-порт ${e(S().port)}</span></p>`;
-  const fp = (title, changed = S().rotatedKey) => `<section class="ins-card ins-fingerprint"><h3 class="ins-section-title">${e(title)}</h3><span class="ins-note">ssh-ed25519</span><code>SHA256:${changed ? 'cD9mT6sV4aP8nL2kH7rQ1wX5eF3uJ0bG6zN9iO4yK2A' : 'Z7mKp2R8wQ4bN6vYcJ3xT9aL5hF1uD0eG8sW4rE2nPo'}</code></section>`;
+  const exampleHost = '78.17.198.175';
+  const fp = (title, changed = S().rotatedKey, typeLabel = '') => `<section class="ins-card ins-fingerprint"><h3 class="ins-section-title">${e(title)}</h3><span class="ins-note">${e(typeLabel)}ssh-ed25519</span><code>SHA256:${changed ? 'cD9mT6sV4aP8nL2kH7rQ1wX5eF3uJ0bG6zN9iO4yK2A' : 'LyM/VhJVe5MSZAzBGijRbfwHmgggN7KiPNQrLavGadY'}</code></section>`;
   const scenarios = (content, open = false) => `<details class="ins-demo-controls" ${open ? 'open' : ''}><summary>${I('FlaskConical')} Сценарии макета</summary><div class="ins-stack">${content}<p class="ins-note">Демонстрационные данные. Подключение к VPS и установка не выполняются.</p></div></details>`;
   const notice = () => S().notice ? alert(e(S().notice), 'warning') : '';
   const normalDomain = (value, hostnameOnly = false) => {
@@ -115,7 +116,7 @@
       if(M.state.screen !== source){S().checking=false;notify();return;}
       S().checking=false; S().notice='';
       if(access){S().accessAvailable=true;S().accessUntil=Date.now()+600000;}
-      if(S().reconnecting){S().reconnecting=false;S().stale=false;S().statusKnown=true;}
+      if(S().reconnecting){S().reconnecting=false;S().stale=false;S().statusKnown=S().jobError!=='STATE_UNAVAILABLE';}
       go(next);
     }, 900);
   };
@@ -128,7 +129,7 @@
     <form id="ins-details" class="on-form" novalidate><div class="on-field-row">${field('IP-адрес или имя VPS', 'host', S().host, '203.0.113.10', 'autocomplete="off" spellcheck="false"')}${field('SSH-порт', 'port', S().port, '22', 'inputmode="numeric" maxlength="5"')}</div>${field('Домен будущего MeetSpace', 'domain', S().domain, 'meet.example.org', 'autocomplete="off" spellcheck="false"')}<p class="ins-note">Для VPS укажите IP или имя сервера. Для MeetSpace — домен или HTTPS-адрес.</p>${error}${button('Проверить ключ сервера', 'type="submit"')}<p class="ins-note">На этом шаге пароль и приватный ключ не передаются. Сначала подтвердите публичный ключ сервера по независимому источнику.</p></form>${scenarios(button('Заполнить пример', 'id="ins-fill-example" type="button"', true))}${demo('Все проверки и результаты в этом сценарии демонстрационные.')}`, { back: 'welcome' }), () => {
     if(S().hasJob){bindPending();return;}
     const form = document.getElementById('ins-details');
-    document.getElementById('ins-fill-example').onclick = () => { form.elements.host.value = '8.8.8.8'; form.elements.domain.value = 'meet.example.org'; form.elements.port.value = '22'; };
+    document.getElementById('ins-fill-example').onclick = () => { form.elements.host.value = exampleHost; form.elements.domain.value = 'meet.example.org'; form.elements.port.value = '22'; };
     document.getElementById('ins-restore-job')?.addEventListener('click', () => { S().stale = true; S().reconnecting = true; resetAccess(); go('ssh-auth'); });
     form.onsubmit = event => {
       event.preventDefault();
@@ -143,9 +144,44 @@
     };
   });
 
-  register('fingerprint', 'Проверка ключа', () => frame(`${progress(2)}${heading('ИДЕНТИЧНОСТЬ СЕРВЕРА', 'Знакомимся безопасно.', 'При первом подключении проверьте отпечаток SSH-ключа сервера.')}${endpoint()}<div class="ins-stack">${S().trustStatus === 'changed' ? `${alert('Ключ сервера изменился. Подключение заблокировано. Сначала выясните причину смены ключа.', 'danger')}${fp('Сохранённый отпечаток', false)}${fp('Новый отпечаток', true)}${button('Удалить сохранённое доверие…', 'id="ins-forget-trust"', true)}` : `<h2 class="ins-section-title">Первое подключение</h2>${fp('SHA-256 отпечаток публичного ключа')}<p class="ins-note">Сравните отпечаток с панелью VPS или данными администратора по независимому каналу. Само SSH-подключение не доказывает, что это нужный сервер.</p><label class="ins-checkbox"><input type="checkbox" id="ins-trust"><span>Я сравнил отпечаток с панелью VPS или данными администратора</span></label>${button('Доверять этому ключу', 'id="ins-trust-next" disabled')}`}</div>${scenarios(`<label class="field"><span>Состояние ключа</span><select id="ins-trust-scenario"><option value="new" ${S().trustStatus === 'new' ? 'selected' : ''}>Первое подключение</option><option value="changed" ${S().trustStatus === 'changed' ? 'selected' : ''}>Ключ изменился</option></select></label>`)}${demo('Отпечатки приведены для демонстрации интерфейса.')}`, { back: 'deploy' }), () => {
+  register('fingerprint', 'Проверка ключа', () => {
+    const changed = S().trustStatus === 'changed';
+    return frame(`
+      ${progress(2, 'Подключение к серверу', 'Шаг 2 из 5')}
+      <div class="on-heading ins-verification-heading">
+        <h1>Проверка сервера</h1>
+        <p><strong>Убедитесь, что подключаетесь к нужному серверу.</strong></p>
+        ${changed ? '' : '<p>При первом подключении необходимо проверить ключ безопасности сервера.</p>'}
+      </div>
+      <p class="ins-endpoint"><strong>Адрес сервера:</strong> ${e(S().host || exampleHost)}<span><strong>SSH-порт:</strong> ${e(S().port)}</span></p>
+      <div class="ins-stack">${changed ? `
+        ${alert('Ключ сервера изменился. Подключение заблокировано. Сначала выясните причину смены ключа.', 'danger')}
+        ${fp('Сохранённый отпечаток', false)}
+        ${fp('Новый отпечаток', true)}
+        ${button('Удалить сохранённое доверие…', 'id="ins-forget-trust"', true)}
+      ` : `
+        <h2 class="ins-section-title">Первое подключение</h2>
+        ${fp('SHA-256-хеш публичного ключа сервера', S().rotatedKey, 'Тип ключа: ')}
+        <p class="ins-note">Сравните этот хеш с тем, который указан в панели управления сервером, или уточните его у администратора.</p>
+        <p class="ins-note">Если значения совпадают, можно безопасно продолжить подключение.</p>
+        <label class="ins-checkbox"><input type="checkbox" id="ins-trust"><span>Я проверил SHA-256-хеш ключа сервера.</span></label>
+        ${button('Доверять этому ключу', 'id="ins-trust-next" disabled')}
+      `}</div>
+      ${scenarios(`<label class="field"><span>Состояние ключа</span><select id="ins-trust-scenario"><option value="new" ${!changed ? 'selected' : ''}>Первое подключение</option><option value="changed" ${changed ? 'selected' : ''}>Ключ изменился</option></select></label>`)}
+      ${demo('Отпечатки приведены для демонстрации интерфейса.')}
+    `, { back: 'deploy' });
+  }, () => {
     document.getElementById('ins-trust')?.addEventListener('change', event => { document.getElementById('ins-trust-next').disabled = !event.target.checked; });
-    document.getElementById('ins-trust-next')?.addEventListener('click', () => { S().trustedEndpoint = `${S().host}:${S().port}`; S().notice = ''; go('ssh-auth'); });
+    document.getElementById('ins-trust-next')?.addEventListener('click', () => {
+      const state = S();
+      if (!state.host) {
+        state.host = exampleHost;
+        state.publicIpv4 = exampleHost;
+      }
+      state.trustedEndpoint = `${state.host}:${state.port}`;
+      state.notice = '';
+      go('ssh-auth');
+    });
     document.getElementById('ins-trust-scenario').onchange = event => { S().trustStatus = event.target.value; resetAccess(); M.render(); };
     document.getElementById('ins-forget-trust')?.addEventListener('click', () => M.modal('Удалить доверие к серверу?', `<p class="ins-note">Защита от подмены для ${e(S().host)}:${e(S().port)} будет сброшена. Затем потребуется заново получить ключ и сравнить отпечаток по независимому источнику.</p><div class="ins-actions"><button class="button secondary" data-close>Отмена</button><button class="button danger" id="ins-confirm-forget">Удалить доверие</button></div>`, () => {
       document.getElementById('ins-confirm-forget').onclick = () => { S().trustedEndpoint = ''; S().trustStatus = 'new'; S().rotatedKey = true; resetAccess(); M.closeModal(); go('deploy'); };
@@ -234,10 +270,40 @@
   const phaseDetail = () => S().stage === 7 ? (S().certificateMode === 'custom' ? 'Подключение вашего сертификата и проверка HTTPS' : 'Выпуск сертификата Let’s Encrypt и проверка HTTPS') : S().stage === 2 ? S().installMode==='source' ? 'Подготовка образов · backend' : ({download:'Загрузка пакета выпуска',verify:'Проверка контрольных сумм',load:'Загрузка образов в Docker'})[S().imageStep] : '';
   const progressCard = () => `<section class="ins-card ins-progress-summary" aria-live="polite"><span class="ins-status">${e(stateLabel())}</span><h2 class="ins-section-title">${S().stale ? 'Последний известный этап' : 'Текущий этап'}</h2><strong>${phases[Math.min(9,S().stage)]}</strong>${phaseDetail()?`<p class="ins-note">${phaseDetail()}</p>`:''}<div class="ins-progress-line"><progress max="10" value="${S().stage}"></progress><span>${S().stage * 10}%</span></div><p class="ins-note">Подтверждено этапов: ${S().stage} из 10${S().stale ? ' · данные требуют проверки' : ''}</p></section>`;
   const detailBlock = (complete=false) => `<details class="ins-card" id="ins-job-details" ${S().detailsExpanded?'open':''}><summary>Подробности установки</summary><div class="ins-stack"><dl class="ins-meta"><div><dt>Задание</dt><dd>${e(S().jobId)}</dd></div><div><dt>Commit</dt><dd>${e(S().jobCommit || window.MSInstaller.demoPlan().commit)} · пример</dd></div><div><dt>HTTPS-сертификат</dt><dd>${S().certificateMode==='custom'?'SSL-сертификат':'Let’s Encrypt'}</dd></div><div><dt>Способ установки</dt><dd>${S().installMode==='images'?'Готовые образы':'Сборка на сервере'}</dd></div></dl><p class="ins-note">Закрытие экрана или обрыв SSH не останавливают серверное задание. Доступ хранится только в памяти открытого мастера.</p>${complete ? '<p class="ins-note">Сервисы, версии образов, HTTPS и авторизация TURN проверены с VPS. Доступ из вашей сети будет проверен при подключении. Видеозвонок ещё не проверялся.</p>' : recovery() || S().stale ? phaseList() : ''}<h3 class="ins-section-title">Журнал этапов</h3><div class="ins-log">${phases.slice(0,S().stage).map((phase,i)=>`<p>${i+1}. ${phase} · завершено</p>`).join('')}<p>${S().jobStatus==='completed'?'':`${S().stage+1}. `}${S().jobStatus==='completed'?'Все этапы подтверждены':phases[Math.min(S().stage,9)]} · ${e(stateLabel())}</p></div></div></details>`;
-  const drawProgress = () => frame(`${progress(4)}${heading('УСТАНОВКА MEETSPACE', recovery() ? 'Продолжим с этого места.' : S().stale ? 'Проверим состояние.' : 'Ваше пространство создаётся.', `${e(S().username)}@${e(S().host || 'VPS')}:${e(S().port)}`)}<div class="ins-stack">${S().jobError?alert(`${e(window.MSInstallerErrors?.[S().jobError]||'Установка требует внимания. Проверьте состояние.')}<br><code>${e(S().jobError)}</code>`,'danger'):''}${!S().statusKnown ? alert('Состояние пока неизвестно. Для проверки подключитесь снова.', 'warning') + reconnectButton() : `${progressCard()}${S().stale ? reconnectButton() : recovery() ? `${alert('Продолжение использует прежний план и сохранённые на сервере секреты. Данные и тома не удаляются.', 'warning')}${S().accessAvailable ? button('Подтвердить продолжение', 'id="ins-resume"') : reconnectButton()}` : `${phaseList()}<p class="ins-note">Остановка произойдёт после текущей команды: сборка одного образа может занять до часа. Запущенные сервисы и данные сохранятся.</p>${button('Остановить установку на сервере', `id="ins-cancel" ${S().jobStatus==='cancel_requested'?'disabled':''}`, true)}`}`}${detailBlock()}${button('Закрыть наблюдение', 'id="ins-detach"', true)}${!S().statusKnown ? button('Проверить сервер и обновить план', 'id="ins-refresh-plan"', true) : ''}</div>${scenarios(`${S().stage===2&&S().installMode==='images'?`<label class="field"><span>Подготовка готовых образов</span><select id="ins-image-step">${[['download','Загрузка пакета'],['verify','Проверка пакета'],['load','Импорт в Docker']].map(([id,label])=>`<option value="${id}" ${S().imageStep===id?'selected':''}>${label}</option>`).join('')}</select></label>`:''}${button(S().jobStatus==='cancel_requested'?'Подтвердить безопасную остановку':'Подтвердить следующий этап', 'id="ins-stage-next"', true)}<label class="field"><span>Состояние задания</span><select id="ins-job-scenario"><option value="running">Установка выполняется</option><option value="stale" ${S().stale?'selected':''}>Обрыв SSH · устаревший статус</option><option value="unknown" ${!S().statusKnown?'selected':''}>Состояние неизвестно</option>${[['needs_recovery','Требуется восстановление'],['failed','Ошибка установки'],['cancelled','Остановлено']].map(([id,label])=>`<option value="${id}" ${S().jobStatus===id?'selected':''}>${label}</option>`).join('')}</select></label><label class="field"><span>Код ошибки Android</span><select id="ins-job-error"><option value="">Без ошибки</option>${Object.entries(window.MSInstallerErrors||{}).map(([code,text])=>`<option value="${code}" ${S().jobError===code?'selected':''}>${code} · ${e(text)}</option>`).join('')}</select></label>`, true)}${demo('Этапы переключаются вручную. Серверное задание не запускается.')}`);
+  const canRefreshPlan = () => S().jobError === 'STATE_UNAVAILABLE' && S().accessAvailable;
+  const planCheckScenario = () => S().jobError !== 'STATE_UNAVAILABLE' ? '' : `<label class="field"><span>Результат проверки задания</span><select id="ins-plan-check-result"><option value="missing" ${S().planCheckResult === 'missing' ? 'selected' : ''}>Задание не найдено</option><option value="existing" ${S().planCheckResult === 'existing' ? 'selected' : ''}>Сохранённое задание найдено</option></select></label>`;
+  const refreshMissingPlan = () => {
+    if (!canRefreshPlan()) return;
+    const state = S();
+    state.jobError = '';
+    state.stale = false;
+    state.statusKnown = true;
+    if (state.planCheckResult === 'existing') {
+      state.jobDiscovered = true;
+      go(state.jobStatus === 'completed' ? 'complete' : 'install');
+      return;
+    }
+    Object.assign(state, { hasJob: false, jobDiscovered: false, jobStatus: 'running', stage: 0, jobCommit: '', planExpired: false, detailsExpanded: false });
+    go(window.MSInstaller.validateInstallOptions(state) ? 'install-options' : 'install-plan');
+  };
+  const drawProgress = () => frame(`${progress(4)}${heading('УСТАНОВКА MEETSPACE', recovery() ? 'Продолжим с этого места.' : S().stale ? 'Проверим состояние.' : 'Ваше пространство создаётся.', `${e(S().username)}@${e(S().host || 'VPS')}:${e(S().port)}`)}<div class="ins-stack">${S().jobError?alert(`${e(window.MSInstallerErrors?.[S().jobError]||'Установка требует внимания. Проверьте состояние.')}<br><code>${e(S().jobError)}</code>`,'danger'):''}${!S().statusKnown ? alert(S().accessAvailable ? 'Состояние пока неизвестно. Проверьте сервер и обновите план.' : 'Состояние пока неизвестно. Для проверки подключитесь снова.', 'warning') + (S().accessAvailable ? '' : reconnectButton()) : `${progressCard()}${S().stale ? reconnectButton() : recovery() ? `${alert('Продолжение использует прежний план и сохранённые на сервере секреты. Данные и тома не удаляются.', 'warning')}${S().accessAvailable ? button('Подтвердить продолжение', 'id="ins-resume"') : reconnectButton()}` : `${phaseList()}<p class="ins-note">Остановка произойдёт после текущей команды: сборка одного образа может занять до часа. Запущенные сервисы и данные сохранятся.</p>${button('Остановить установку на сервере', `id="ins-cancel" ${S().jobStatus==='cancel_requested'?'disabled':''}`, true)}`}`}${detailBlock()}${button('Закрыть наблюдение', 'id="ins-detach"', true)}${canRefreshPlan() ? button('Проверить сервер и обновить план', 'id="ins-refresh-plan"', true) : ''}</div>${scenarios(`${planCheckScenario()}${S().stage===2&&S().installMode==='images'?`<label class="field"><span>Подготовка готовых образов</span><select id="ins-image-step">${[['download','Загрузка пакета'],['verify','Проверка пакета'],['load','Импорт в Docker']].map(([id,label])=>`<option value="${id}" ${S().imageStep===id?'selected':''}>${label}</option>`).join('')}</select></label>`:''}${button(S().jobStatus==='cancel_requested'?'Подтвердить безопасную остановку':'Подтвердить следующий этап', 'id="ins-stage-next"', true)}<label class="field"><span>Состояние задания</span><select id="ins-job-scenario"><option value="running">Установка выполняется</option><option value="stale" ${S().stale?'selected':''}>Обрыв SSH · устаревший статус</option><option value="unknown" ${!S().statusKnown?'selected':''}>Состояние неизвестно</option>${[['needs_recovery','Требуется восстановление'],['failed','Ошибка установки'],['cancelled','Остановлено']].map(([id,label])=>`<option value="${id}" ${S().jobStatus===id?'selected':''}>${label}</option>`).join('')}</select></label><label class="field"><span>Код ошибки Android</span><select id="ins-job-error"><option value="">Без ошибки</option>${Object.entries(window.MSInstallerErrors||{}).map(([code,text])=>`<option value="${code}" ${S().jobError===code?'selected':''}>${code} · ${e(text)}</option>`).join('')}</select></label>`, true)}${demo('Этапы переключаются вручную. Серверное задание не запускается.')}`);
   const bindProgress = () => {
     S().hasJob = true;
-    document.getElementById('ins-job-error').onchange=event=>{S().jobError=event.target.value;S().stale=false;S().statusKnown=S().jobError!=='STATE_UNAVAILABLE';S().jobStatus=S().jobError?'failed':'running';S().accessAvailable=!S().jobError;M.render();};
+    document.getElementById('ins-job-error').onchange = event => {
+      const state = S();
+      state.jobError = event.target.value;
+      state.stale = false;
+      state.statusKnown = state.jobError !== 'STATE_UNAVAILABLE';
+      if (state.statusKnown) {
+        state.jobStatus = state.jobError ? 'failed' : 'running';
+        state.accessAvailable = !state.jobError;
+      }
+      M.render();
+    };
+    document.getElementById('ins-plan-check-result')?.addEventListener('change', event => {
+      S().planCheckResult = event.target.value;
+      notify();
+    });
     document.getElementById('ins-image-step')?.addEventListener('change',event=>{S().imageStep=event.target.value;M.render();});
     document.getElementById('ins-stage-next').onclick = () => {
       if (!S().statusKnown || S().stale || recovery()) { M.toast('Сначала проверьте состояние и подтвердите продолжение.'); return; }
@@ -249,7 +315,7 @@
     document.getElementById('ins-resume')?.addEventListener('click',()=>{S().jobStatus='running';S().stale=false;S().jobError='';go('install');});
     document.getElementById('ins-reconnect')?.addEventListener('click',()=>{S().reconnecting=true;resetAccess();go('ssh-auth');});
     document.getElementById('ins-detach').onclick=()=>{S().stale=true;S().accessAvailable=false;go('deploy');};
-    document.getElementById('ins-refresh-plan')?.addEventListener('click',()=>{S().hasJob=false;S().accessAvailable=false;S().planExpired=true;go('install-options');});
+    document.getElementById('ins-refresh-plan')?.addEventListener('click', refreshMissingPlan);
     document.getElementById('ins-job-details').ontoggle=event=>{if(S().detailsExpanded!==event.target.open){S().detailsExpanded=event.target.open;notify();}};
     document.getElementById('ins-job-scenario').onchange=event=>{
       const v=event.target.value; S().jobError='';S().stale=v==='stale';S().statusKnown=v!=='unknown';
@@ -261,9 +327,10 @@
   };
   register('install','Установка',drawProgress,bindProgress);
   register('install-error','Восстановление установки',()=>{if(S().jobStatus==='running'){S().jobStatus='needs_recovery';S().hasJob=true;}return drawProgress();},bindProgress);
-  register('complete','Пространство готово',()=>{S().stage=10;S().jobStatus='completed';S().stale=false;S().statusKnown=true;S().accessAvailable=false;S().accessUntil=0;S().jobError='';return frame(`${progress(5)}<div class="on-complete-art" aria-hidden="true"><span>${I('Check')}</span></div>${heading('ГОТОВО К ОБЩЕНИЮ','Пространство готово.','Установка на сервере завершена · пример результата.')}<div class="ins-stack"><section class="ins-card"><span class="ins-note">АДРЕС ВАШЕГО ПРОСТРАНСТВА</span><h2 class="ins-section-title">${e(S().domain || 'meet.example.org')}</h2><p class="ins-note">${S().certificateMode==='custom'?'SSL-сертификат':'Let’s Encrypt'} · HTTPS проверен с VPS · демонстрация</p></section>${S().installAdmin?`<section class="ins-card"><h2 class="ins-section-title">${I('ShieldCheck')} Администрирование</h2><p class="ins-endpoint">https://${e(S().domain || 'meet.example.org')}:${e(S().adminPort)}</p><p>Логин: <strong>${e(S().adminUsername)}</strong></p><p class="ins-note">Откройте админку и войдите с заданным паролем. LDAP / Active Directory настраивается в разделе «Настройки». Пользовательские аккаунты создаются отдельно.</p><div class="ins-stack">${button('Открыть админку','data-toast="Демо: переход к административной панели. Сервер не развёрнут."',true)}${button('Скопировать адрес','id="ins-copy-admin"',true)}</div></section>`:''}${button('Создать аккаунт','data-go="register"')}<div class="on-account-switch"><span>Уже есть аккаунт?</span><button data-go="login">Войти</button></div><button class="ins-text-link" id="ins-forget-job">Убрать завершённое задание с устройства</button>${detailBlock(true)}</div>${demo('Макет не разворачивает сервер. Все результаты демонстрационные.')}`);},()=>{
+  const adminSummary = () => S().jobDiscovered ? '' : `<section class="ins-card"><h2 class="ins-section-title">${I('ShieldCheck')} Администрирование</h2><p class="ins-endpoint">https://${e(S().domain || 'meet.example.org')}:${e(S().adminPort)}</p><p>Логин: <strong>${e(S().adminUsername)}</strong></p><p class="ins-note">Откройте админку и войдите с заданным паролем. LDAP / Active Directory настраивается в разделе «Настройки». Пользовательские аккаунты создаются отдельно.</p><div class="ins-stack">${button('Открыть админку','data-toast="Демо: переход к административной панели. Сервер не развёрнут."',true)}${button('Скопировать адрес','id="ins-copy-admin"',true)}</div></section>`;
+  register('complete','Пространство готово',()=>{S().stage=10;S().jobStatus='completed';S().stale=false;S().statusKnown=true;S().accessAvailable=false;S().accessUntil=0;S().jobError='';return frame(`${progress(5)}<div class="on-complete-art" aria-hidden="true"><span>${I('Check')}</span></div>${heading('ГОТОВО К ОБЩЕНИЮ','Пространство готово.','Установка на сервере завершена · пример результата.')}<div class="ins-stack"><section class="ins-card"><span class="ins-note">АДРЕС ВАШЕГО ПРОСТРАНСТВА</span><h2 class="ins-section-title">${e(S().domain || 'meet.example.org')}</h2><p class="ins-note">${S().certificateMode==='custom'?'SSL-сертификат':'Let’s Encrypt'} · HTTPS проверен с VPS · демонстрация</p></section>${adminSummary()}${button('Создать аккаунт','data-go="register"')}<div class="on-account-switch"><span>Уже есть аккаунт?</span><button data-go="login">Войти</button></div><button class="ins-text-link" id="ins-forget-job">Убрать завершённое задание с устройства</button>${detailBlock(true)}</div>${demo('Макет не разворачивает сервер. Все результаты демонстрационные.')}`);},()=>{
     document.getElementById('ins-job-details').ontoggle=event=>{if(S().detailsExpanded!==event.target.open){S().detailsExpanded=event.target.open;notify();}};
     document.getElementById('ins-copy-admin')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(`https://${S().domain||'meet.example.org'}:${S().adminPort}`);M.toast('Адрес скопирован');}catch{M.toast('Выделите адрес и скопируйте вручную');}});
-    document.getElementById('ins-forget-job').onclick=()=>{S().hasJob=false;S().stage=0;S().jobStatus='running';S().stale=false;S().detailsExpanded=false;resetAccess();go('welcome');};
+    document.getElementById('ins-forget-job').onclick=()=>{S().hasJob=false;S().jobDiscovered=false;S().stage=0;S().jobStatus='running';S().stale=false;S().detailsExpanded=false;resetAccess();go('welcome');};
   });
 })();
