@@ -394,3 +394,105 @@
   .on-layout.ins-layout .on-install-mode,
   .on-layout.ins-layout .on-install-track > i { transition: none; }
 }
+
+/* Certificate choice and local PEM file controls. */
+.on-layout.ins-layout .ins-certificate-modes {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.on-layout.ins-layout .ins-certificate-modes .on-install-mode {
+  margin: 0;
+  min-height: 100px;
+}
+.on-layout.ins-layout .ins-certificate-upload {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px 16px;
+  min-width: 0;
+  min-height: 104px;
+  margin: 0;
+  padding: 20px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+.on-layout.ins-layout .ins-upload-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--accent);
+}
+.on-layout.ins-layout .ins-upload-icon svg { width: 20px; height: 20px; }
+.on-layout.ins-layout .ins-upload-copy { min-width: 0; align-self: center; }
+.on-layout.ins-layout .ins-upload-copy strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--ins-body);
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.on-layout.ins-layout .ins-upload-copy small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--ins-small);
+  font-weight: 400;
+  line-height: 1.6;
+}
+.on-layout.ins-layout .ins-upload-name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--ins-small);
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.on-layout.ins-layout .ins-certificate-upload > input.ins-certificate-file {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.on-layout.ins-layout .ins-certificate-upload:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-color: var(--accent);
+}
+.on-layout.ins-layout .ins-certificate-upload.is-selected {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.on-layout.ins-layout .ins-certificate-upload.is-selected .ins-upload-name { color: var(--accent); }
+.on-layout.ins-layout .ins-certificate-upload:has(input[aria-invalid="true"]) {
+  border-style: solid;
+  border-color: var(--ins-danger);
+}
+.on-layout.ins-layout .ins-certificate-upload:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 759px) {
+  .on-layout.ins-layout .ins-certificate-upload {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 10px 12px;
+    padding: 18px 16px;
+  }
+  .on-layout.ins-layout .ins-upload-icon { width: 36px; height: 36px; border-radius: 10px; }
+}
