@@ -83,15 +83,13 @@
 @keyframes account-meter { to { opacity:.15; } }
 .account-audio-hint { margin:10px 0 0; color:var(--muted); font-size:.82em; line-height:1.6; }
 .account-audio-hint:empty { display:none; }
-.account-audio-card header + .account-audio-hint { margin-top:0; }
+.account-audio-card header + .account-audio-hint { margin:0 0 12px; }
 .account-volume { display:grid; gap:2px; min-width:0; margin-top:20px; }
 .account-volume > div { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:.9em; }
 .account-volume label { min-width:0; line-height:1.5; }
 .account-volume output { flex-shrink:0; min-width:48px; border-radius:9px; padding:5px 8px; background:var(--accent-soft); color:var(--accent); text-align:center; font-size:.85em; font-weight:600; font-variant-numeric:tabular-nums; }
 .account-volume input { display:block; width:100%; min-width:0; min-height:44px; margin:0; padding:0; accent-color:var(--accent); cursor:pointer; }
 .account-audio-card .account-switch-row { min-height:58px; padding:13px 0; cursor:pointer; }
-.account-audio-output-label { display:block; margin:16px 0 9px; font-size:.9em; font-weight:500; }
-.account-audio-card > .account-audio-test { margin-top:12px; }
 .account-output-options { display:grid; gap:7px; }
 .account-output-option { display:flex; align-items:center; gap:11px; width:100%; min-height:50px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); color:var(--ink); text-align:left; font-size:13px; }
 .account-output-option svg { width:19px; height:19px; flex-shrink:0; }

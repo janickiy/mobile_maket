@@ -40,10 +40,19 @@
   const audioTestLabels = { mic: "микрофон", speaker: "динамик", signals: "сигналы" };
   const audioStopLabels = { mic: "микрофона", speaker: "динамика", signals: "сигналов" };
   const audioVolumeKeys = { mic: "microphoneVolume", speaker: "speakerVolume", signals: "signalVolume" };
-  const audioSelect = (key, label, choices, id = "") => `<select ${id ? `id="${id}"` : ""} data-pref="${key}" aria-label="${label}">${choices.map(([value, text]) => `<option value="${value}" ${s[key] === value ? "selected" : ""}>${text}</option>`).join("")}</select>`;
+  const audioSelect = (key, label, choices) => `<select data-pref="${key}" aria-label="${label}">${choices.map(([value, text]) => `<option value="${value}" ${s[key] === value ? "selected" : ""}>${text}</option>`).join("")}</select>`;
   const audioTest = (kind) => `<button type="button" class="account-audio-test" data-action="accountAudioTest" data-audio-test="${kind}" aria-label="Проверить ${audioTestLabels[kind]}" aria-pressed="false">${I(kind === "mic" ? "Mic" : "Play")}<span>Проверить</span></button>`;
   const audioMeter = (label) => `<span class="account-audio-meter" role="img" aria-label="${label}">${Array.from({length: 8}, (_, i) => `<i style="--bar:${i}"></i>`).join("")}</span>`;
   const volume = (key, label) => `<div class="account-volume"><div><label for="account-${key}">${label}</label><output id="account-${key}-value" for="account-${key}">${s[key]}%</output></div><input id="account-${key}" type="range" min="0" max="100" step="1" value="${s[key]}" data-audio-volume="${key}" aria-valuetext="${s[key]}%"/></div>`;
+  const audioOutputCard = ({ kind, title, deviceKey, deviceLabel, volumeLabel, hint }) => `
+    <section class="account-audio-card" data-audio-card="${kind}" aria-labelledby="account-${kind}-heading">
+      <header><h3 id="account-${kind}-heading">${title}</h3>${audioMeter("Тестовый звук")}</header>
+      ${hint ? `<p class="account-audio-hint">${hint}</p>` : ""}
+      <div class="account-audio-select-row">${audioSelect(deviceKey, deviceLabel, audioOutputs)}${audioTest(kind)}</div>
+      <p class="account-audio-hint account-audio-test-status" role="status"></p>
+      ${volume(audioVolumeKeys[kind], volumeLabel)}
+      <button type="button" class="account-text-button" data-action="accountChooseOutput" data-device-pref="${deviceKey}">Выбрать другое устройство</button>
+    </section>`;
   function setAudioTest(button, playing) {
     const card = button.closest("[data-audio-card]"), kind = button.dataset.audioTest;
     button.dataset.testRun = String(Number(button.dataset.testRun || 0) + 1);
@@ -83,22 +92,21 @@
         ${volume("microphoneVolume", "Громкость микрофона")}
         ${switchRow("autoMute", "Подключаться с выключенным микрофоном")}${switchRow("noise", "Шумоподавление")}
       </section>
-      <section class="account-audio-card" data-audio-card="speaker" aria-labelledby="account-speaker-heading">
-        <header><h3 id="account-speaker-heading">Динамик</h3>${audioMeter("Тестовый звук")}</header>
-        <div class="account-audio-select-row">${audioSelect("speaker", "Динамик", audioOutputs)}${audioTest("speaker")}</div>
-        <p class="account-audio-hint account-audio-test-status" role="status"></p>
-        ${volume("speakerVolume", "Громкость динамика")}
-        <button class="account-text-button" data-action="accountChooseOutput" data-device-pref="speaker">Выбрать другое устройство</button>
-      </section>
-      <section class="account-audio-card" data-audio-card="signals" aria-labelledby="account-signals-heading">
-        <header><h3 id="account-signals-heading">Звонки и уведомления</h3></header>
-        <p class="account-audio-hint">Громкость сигнала вызова и уведомлений о сообщениях, приглашениях и скором начале встречи.</p>
-        <label class="account-audio-output-label" for="account-signal-output">Источник звука</label>
-        <div class="account-audio-select-row">${audioSelect("signalOutput", "Динамик для сигналов", audioOutputs, "account-signal-output")}</div>
-        <button class="account-text-button" data-action="accountChooseOutput" data-device-pref="signalOutput">Выбрать другое устройство</button>
-        ${volume("signalVolume", "Громкость сигналов")}
-        ${audioTest("signals")}<p class="account-audio-hint account-audio-test-status" role="status"></p>
-      </section>
+      ${audioOutputCard({
+        kind: "speaker",
+        title: "Динамик",
+        deviceKey: "speaker",
+        deviceLabel: "Динамик",
+        volumeLabel: "Громкость динамика",
+      })}
+      ${audioOutputCard({
+        kind: "signals",
+        title: "Звонки и уведомления",
+        deviceKey: "signalOutput",
+        deviceLabel: "Динамик для сигналов",
+        volumeLabel: "Громкость сигналов",
+        hint: "Громкость сигнала вызова и уведомлений о сообщениях, приглашениях и скором начале встречи.",
+      })}
       <p class="account-audio-hint">Настройки применяются автоматически.</p>
     </div>`;
   const video = () => `${heading("Видео", "Предпросмотр доступен только вам.")}
