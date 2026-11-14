@@ -44,6 +44,12 @@
 .cr-photo-open img { display: block; width: 100%; height: 100%; object-fit: cover; transition: filter .15s ease; }
 .cr-photo-open:hover img { filter: brightness(.93); }
 .cr-photo-open:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.cr-photo-download { position: absolute; right: 6px; bottom: 6px; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid #ffffff99; border-radius: 50%; background: #142039ed; color: #fff; box-shadow: 0 2px 8px #00000040; text-decoration: none; cursor: pointer; opacity: 1; -webkit-tap-highlight-color: transparent; }
+.cr-photo-download:visited { color: #fff; }
+.cr-photo-download > svg { width: 20px; height: 20px; flex-shrink: 0; pointer-events: none; }
+.cr-photo-download:hover { background: #142039; }
+.cr-photo-download:focus-visible { outline: 3px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 5px #142039; }
+.cr-thread.cr-selecting .cr-photo-download { display: none; }
 .cr-photo-single { grid-template-columns: minmax(0, 1fr); width: 240px; }
 .cr-photo-single .cr-photo-tile { aspect-ratio: 16 / 10; }
 .cr-photo-triple { aspect-ratio: 3 / 2; grid-template-rows: repeat(2, minmax(0, 1fr)); }
@@ -59,6 +65,11 @@
 .cr-photo-viewer { display: flex; flex-direction: column; gap: 12px; }
 .cr-photo-viewer img { display: block; width: 100%; max-height: calc(100dvh - 200px); object-fit: contain; border-radius: 12px; background: var(--bg); }
 .cr-photo-viewer > span { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.cr-photo-download-link { display: inline-flex; align-self: flex-start; align-items: center; justify-content: center; gap: 8px; max-width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 10px; color: var(--accent); font-size: 13px; font-weight: 600; line-height: 1.5; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; cursor: pointer; }
+.cr-photo-download-link:visited { color: var(--accent); }
+.cr-photo-download-link > svg { width: 20px; height: 20px; flex-shrink: 0; }
+.cr-photo-download-link:hover { background: var(--accent-soft); }
+.cr-photo-download-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; background: var(--accent-soft); }
 .cr-composer-shell { flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--line); }
 .cr-composer-shell .composer { border-top: 0; padding: 12px 14px; gap: 10px; align-items: flex-end; }
 .cr-composer-shell textarea { flex: 1; width: 100%; min-width: 0; min-height: 48px; resize: none; padding: 14px 12px; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink); border: 0; border-radius: 12px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }

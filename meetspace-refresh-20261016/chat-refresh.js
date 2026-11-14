@@ -102,9 +102,24 @@
     const source = typeof file.previewUrl === 'string' ? file.previewUrl : '';
     return /^image\//i.test(file.type || '') && /^(?:assets\/chat-photos\/[\w-]+\.jpg|data:image\/(?:jpeg|png|webp|gif|avif);base64,[a-z0-9+/=]+)$/i.test(source) ? source : '';
   }
+  function photoDownload(file) {
+    const source = photoSource(file);
+    if (!source) return null;
+    // Blob URLs point to local originals and stay usable in both same-origin device frames.
+    const original = typeof file.originalUrl === 'string' && file.originalUrl.startsWith(`blob:${location.origin}/`) && /^[a-f0-9-]{36}$/i.test(file.originalUrl.split('/').at(-1)) ? file.originalUrl : '';
+    const previewType = !original && source.match(/^data:image\/(jpeg|png|webp|gif|avif);/i)?.[1];
+    const name = previewType ? `${file.name.replace(/\.[^.]+$/, '')}.${previewType === 'jpeg' ? 'jpg' : previewType.toLowerCase()}` : file.name;
+    return {href: original || source, name, preview: Boolean(previewType)};
+  }
+  function photoDownloadLink(file, compact = false) {
+    const download = photoDownload(file);
+    if (!download) return '';
+    const label = download.preview ? 'Скачать фото (превью)' : 'Скачать фото';
+    return `<a class="${compact ? 'cr-photo-download' : 'cr-photo-download-link'}" href="${E(download.href)}" download="${E(download.name)}" aria-label="${E(label)} ${E(file.name)}" title="${E(label)}">${I('Download')}${compact ? '' : `<span>${label}</span>`}</a>`;
+  }
   function attachments(list = [], pending = false) {
     const photos = list.filter(file => photoSource(file)), documents = list.filter(file => !photoSource(file));
-    const grid = photos.length ? `<div class="cr-photo-grid ${photos.length === 1 ? 'cr-photo-single' : ''} ${photos.length === 3 ? 'cr-photo-triple' : ''} ${pending ? 'cr-photo-pending' : ''}" role="group" aria-label="Фото: ${photos.length}">${photos.map(file => `<div class="cr-photo-tile"><button type="button" class="cr-photo-open" data-action="chatRefreshFile" data-id="${E(file.id)}" aria-label="Открыть фото ${E(file.name)}"><img src="${E(photoSource(file))}" alt="${E(file.name)}" decoding="async"/></button>${pending ? `<button type="button" class="cr-photo-remove" data-action="chatRefreshRemoveFile" data-id="${E(file.id)}" aria-label="Убрать ${E(file.name)}">${I('X')}</button>` : ''}</div>`).join('')}</div>` : '';
+    const grid = photos.length ? `<div class="cr-photo-grid ${photos.length === 1 ? 'cr-photo-single' : ''} ${photos.length === 3 ? 'cr-photo-triple' : ''} ${pending ? 'cr-photo-pending' : ''}" role="group" aria-label="Фото: ${photos.length}">${photos.map(file => `<div class="cr-photo-tile"><button type="button" class="cr-photo-open" data-action="chatRefreshFile" data-id="${E(file.id)}" aria-label="Открыть фото ${E(file.name)}"><img src="${E(photoSource(file))}" alt="${E(file.name)}" decoding="async"/></button>${pending ? `<button type="button" class="cr-photo-remove" data-action="chatRefreshRemoveFile" data-id="${E(file.id)}" aria-label="Убрать ${E(file.name)}">${I('X')}</button>` : photoDownloadLink(file, true)}</div>`).join('')}</div>` : '';
     return grid + documents.map(file => attachment(file, pending)).join('');
   }
   async function prepareAttachment(file) {
@@ -449,7 +464,10 @@
           try {
             const prepared = await Promise.all(chosen.map(prepareAttachment));
             if (key !== scope() || !button.isConnected) return;
-            prepared.forEach((item, index) => files.set(item.id, chosen[index]));
+            prepared.forEach((item, index) => {
+              files.set(item.id, chosen[index]);
+              if (photoSource(item)) item.originalUrl = URL.createObjectURL(chosen[index]);
+            });
             data().pending.push(...prepared); M.closeModal(); redraw({focus: true});
           } catch {
             if (button.isConnected) document.getElementById('cr-files-summary').textContent = 'Не удалось подготовить файлы. Попробуйте ещё раз.';
@@ -466,9 +484,8 @@
       const file = [...d.pending, ...d.messages.filter(item => !item.deleted && !item.hiddenForMe).flatMap(item => item.attachments || [])].find(item => item.id === button.dataset.id); if (!file) return;
       const source = photoSource(file);
       if (source) {
-        M.modal(E(file.name), `<div class="cr-photo-viewer"><img src="${E(source)}" alt="${E(file.name)}"/><span>${E(file.name)} · ${formatSize(file.size)}</span>${files.has(file.id) ? '<button id="cr-file-download" class="button primary">Скачать фото</button>' : ''}</div>`, () => {
+        M.modal(E(file.name), `<div class="cr-photo-viewer"><img src="${E(source)}" alt="${E(file.name)}"/><span>${E(file.name)} · ${formatSize(file.size)}</span>${photoDownloadLink(file)}</div>`, () => {
           document.querySelector('.modal').classList.add('cr-photo-modal');
-          bindDownload(file);
         });
         return;
       }
@@ -477,7 +494,7 @@
       });
     }
   });
-  // Синхронизация передаёт компактные фото-превью; исходные файлы остаются в текущем окне.
+  // Синхронизация передаёт фото-превью и временные blob-ссылки на оригиналы в памяти вкладки; на сервер файлы не отправляются.
   M.chatRefreshSnapshot = () => ({
     threads: copy(threads),
     contacts: copy((M.chatContacts?.() || []).filter(person => person.created)),
