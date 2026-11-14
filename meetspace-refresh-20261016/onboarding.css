@@ -1902,3 +1902,306 @@
   .on-layout-account .on-heading h1 { margin-top: 8px; }
   .on-layout-account .on-form { gap: 12px; }
 }
+
+/* Installer choices, optional administration, and the installation recap. */
+.on-layout .on-install-options {
+  min-width: 0;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+}
+.on-layout .on-install-options > legend {
+  padding: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.on-layout .on-option-intro {
+  margin: 6px 0 11px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.on-layout .on-install-modes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+}
+.on-layout .on-install-mode {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  width: 100%;
+  min-height: 84px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.on-layout .on-install-mode:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.on-layout .on-install-mode > input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  grid-column: 3;
+  grid-row: 1;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  background: var(--surface);
+  cursor: pointer;
+}
+.on-layout .on-install-mode > input[type="radio"]:checked {
+  border: 6px solid var(--accent);
+}
+.on-layout .on-mode-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--muted);
+}
+.on-layout .on-install-mode > .on-mode-icon {
+  grid-column: 1;
+  grid-row: 1;
+}
+.on-layout .on-install-mode:has(input:checked) .on-mode-icon {
+  background: var(--surface);
+  color: var(--accent);
+}
+.on-layout .on-install-mode > .on-mode-copy {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+.on-layout .on-mode-copy strong,
+.on-layout .on-admin-switch > span:not(.on-mode-icon) > strong {
+  display: block;
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.on-layout .on-mode-copy small,
+.on-layout .on-admin-switch > span:not(.on-mode-icon) > small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.on-layout .on-install-mode:has(input:focus-visible),
+.on-layout .on-admin-switch:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.on-layout .on-admin-options {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.on-layout .on-admin-switch {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 11px;
+  min-height: 84px;
+  margin: 0;
+  padding: 14px;
+  border-radius: 11px;
+  cursor: pointer;
+}
+.on-layout .on-admin-switch > span {
+  min-width: 0;
+}
+.on-layout .on-admin-options > .on-option-intro {
+  margin: 0 14px 14px;
+}
+.on-layout .on-admin-switch > .toggle {
+  width: 44px;
+  height: 26px;
+  min-width: 44px;
+  min-height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.on-layout .on-admin-switch:has(input:checked) .on-mode-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.on-layout .on-admin-fields {
+  display: grid;
+  min-width: 0;
+  gap: 13px;
+  margin: 0 14px;
+  padding: 15px 0 14px;
+  border-top: 1px solid var(--line);
+}
+.on-layout .on-admin-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  align-items: end;
+  gap: 12px;
+}
+.on-layout .on-admin-field-row > .on-field,
+.on-layout .on-admin-passwords > .on-field,
+.on-layout .on-admin-passwords .on-password-field {
+  min-width: 0;
+}
+.on-layout .on-admin-fields .on-field input,
+.on-layout .on-admin-passwords .on-field input {
+  min-height: 44px;
+}
+.on-layout .on-admin-address {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.on-layout .on-admin-address strong,
+.on-layout .on-admin-address a {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.on-layout .on-install-details {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+.on-layout .on-install-details > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: baseline;
+  gap: 12px;
+}
+.on-layout .on-install-details dt,
+.on-layout .on-install-details dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.on-layout .on-install-details dt {
+  color: var(--muted);
+  font-weight: 400;
+}
+.on-layout .on-install-details dd {
+  color: var(--ink);
+  font-weight: 500;
+  text-align: right;
+}
+.on-layout .on-admin-passwords {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  gap: 13px;
+  margin: 22px 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.on-layout .on-admin-passwords h3,
+.on-layout .on-admin-result h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.on-layout .on-admin-passwords > p:not(.on-form-error),
+.on-layout .on-admin-result > p:not(.on-admin-address) {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.on-layout .on-admin-passwords > small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.on-layout .on-admin-result {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  gap: 13px;
+  margin: 16px 0 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.on-layout .on-admin-result h3,
+.on-layout .on-admin-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.on-layout .on-admin-result-actions > button {
+  justify-self: start;
+  max-width: 100%;
+  min-height: 44px;
+  white-space: normal;
+}
+@media (hover: hover) {
+  .on-layout .on-install-mode:hover {
+    border-color: var(--accent);
+  }
+}
+@media (max-width: 759px) {
+  .on-layout .on-install-mode,
+  .on-layout .on-admin-switch {
+    gap: 10px;
+    padding: 13px 12px;
+  }
+  .on-layout .on-admin-fields {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+  .on-layout .on-admin-field-row {
+    grid-template-columns: minmax(0, 1fr) 102px;
+    gap: 10px;
+  }
+  .on-layout .on-admin-fields .on-field input,
+  .on-layout .on-admin-passwords .on-field input,
+  .on-layout .on-admin-result-actions > button {
+    min-height: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .on-layout .on-install-mode {
+    transition: none;
+  }
+}

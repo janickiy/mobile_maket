@@ -50,7 +50,7 @@ window.MS = {
     const chat = this.chatRoute?.() || null;
     const personalCall = this.personalCallSnapshot?.() || null;
     const accountManager = this.accountManagerSnapshot?.() || null;
-    const productState = { recordings: this.recordingLibrarySnapshot?.(), folders: this.folderSnapshot?.(), chat: this.chatRefreshSnapshot?.(), workspace: this.workspaceRefreshSnapshot?.(), notifications: this.notificationSnapshot?.(), avatars: this.avatarSnapshot?.(), groupEditing: this.groupEditingSnapshot?.() };
+    const productState = { recordings: this.recordingLibrarySnapshot?.(), folders: this.folderSnapshot?.(), chat: this.chatRefreshSnapshot?.(), workspace: this.workspaceRefreshSnapshot?.(), notifications: this.notificationSnapshot?.(), avatars: this.avatarSnapshot?.(), groupEditing: this.groupEditingSnapshot?.(), installer: this.installerSnapshot?.() };
     if (chat) url.searchParams.set("chat", chat);
     else url.searchParams.delete("chat");
     const section = this.accountSectionRoute?.() || null;
@@ -73,7 +73,7 @@ window.MS = {
     window.parent.postMessage({type: 'ms:navigate', screen:this.state.screen, theme:this.state.theme,
       section:this.accountSectionRoute?.() || null, chat:this.chatRoute?.(),
       personalCall:this.personalCallSnapshot?.(), accountManager:this.accountManagerSnapshot?.(),
-      productState:{recordings:this.recordingLibrarySnapshot?.(), folders:this.folderSnapshot?.(), chat:this.chatRefreshSnapshot?.(), workspace:this.workspaceRefreshSnapshot?.(), notifications:this.notificationSnapshot?.(), avatars:this.avatarSnapshot?.(), groupEditing:this.groupEditingSnapshot?.()}
+      productState:{recordings:this.recordingLibrarySnapshot?.(), folders:this.folderSnapshot?.(), chat:this.chatRefreshSnapshot?.(), workspace:this.workspaceRefreshSnapshot?.(), notifications:this.notificationSnapshot?.(), avatars:this.avatarSnapshot?.(), groupEditing:this.groupEditingSnapshot?.(), installer:this.installerSnapshot?.()}
     }, location.origin === 'null' ? '*' : location.origin);
   },
   recordingsChanged() { this.productStateChanged(); },
@@ -164,6 +164,7 @@ window.MS = {
         this.setGroupEditingSnapshot?.(updates.groupEditing),
         this.setAvatarSnapshot?.(updates.avatars),
         this.setWorkspaceRefreshSnapshot?.(updates.workspace),
+        this.setInstallerSnapshot?.(updates.installer),
       ].some(Boolean);
       const sectionChanged = Object.hasOwn(e.data, "section")
         ? this.setAccountSectionRoute?.(e.data.section) : false;
