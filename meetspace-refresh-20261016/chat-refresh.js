@@ -25,8 +25,12 @@
       threads[key] = {
         messages: c?.created ? [] : [
           {id: 'm1', author: first, initials: initials(first), tone: group ? 'mint' : c?.tone, text: 'Доброе утро! Материалы к встрече готовы. Посмотрите, когда будет минутка.', time: '09:32', attachments: [{id: 'demo-pdf', name: 'Обзор продукта.pdf', size: 2516582, demo: true}], reaction: false},
-          {id: 'm2', own: true, text: 'Спасибо! Посмотрю перед встречей. Есть пара идей по навигации.', time: '09:34', attachments: []},
-          {id: 'm3', author: second, initials: initials(second), tone: 'orange', text: 'Встречаемся в 10:00. Обсудим новую версию и планы команды.', time: '09:38', attachments: []},
+          {id: 'm2', own: true, text: 'Спасибо! Посмотрю перед встречей. Есть пара идей по навигации.', time: '09:34', attachments: c?.id === 'team' ? [{id: 'demo-office', name: 'Наш офис.jpg', type: 'image/jpeg', size: 63425, previewUrl: 'assets/chat-photos/office.jpg', demo: true}] : []},
+          {id: 'm3', author: second, initials: initials(second), tone: 'orange', text: 'Встречаемся в 10:00. Обсудим новую версию и планы команды.', time: '09:38', attachments: c?.id === 'team' ? [
+            {id: 'demo-room', name: 'Переговорная.jpg', type: 'image/jpeg', size: 64898, previewUrl: 'assets/chat-photos/meeting-room.jpg', demo: true},
+            {id: 'demo-workspace', name: 'Рабочее пространство.jpg', type: 'image/jpeg', size: 51918, previewUrl: 'assets/chat-photos/workspace.jpg', demo: true},
+            {id: 'demo-office-detail', name: 'Офис команды.jpg', type: 'image/jpeg', size: 63425, previewUrl: 'assets/chat-photos/office.jpg', demo: true}
+          ] : []},
         ],
         muted: false, hidden: false, pins: c?.created ? [] : ['m3'], draft: '', pending: [], reply: null, editing: null, editText: ''
       };
@@ -93,11 +97,48 @@
   function attachment(file, pending = false) {
     return `<div class="cr-attachment">${I('FileText')}<span><strong>${E(file.name)}</strong><small>${formatSize(file.size)}</small></span><button type="button" class="icon-button" data-action="${pending ? 'chatRefreshRemoveFile' : 'chatRefreshFile'}" data-id="${E(file.id)}" aria-label="${pending ? 'Убрать' : 'Открыть'} ${E(file.name)}">${I(pending ? 'X' : 'Download')}</button></div>`;
   }
+  // Local previews are raster images; compact data URLs also work in both device frames.
+  function photoSource(file) {
+    const source = typeof file.previewUrl === 'string' ? file.previewUrl : '';
+    return /^image\//i.test(file.type || '') && /^(?:assets\/chat-photos\/[\w-]+\.jpg|data:image\/(?:jpeg|png|webp|gif|avif);base64,[a-z0-9+/=]+)$/i.test(source) ? source : '';
+  }
+  function attachments(list = [], pending = false) {
+    const photos = list.filter(file => photoSource(file)), documents = list.filter(file => !photoSource(file));
+    const grid = photos.length ? `<div class="cr-photo-grid ${photos.length === 1 ? 'cr-photo-single' : ''} ${photos.length === 3 ? 'cr-photo-triple' : ''} ${pending ? 'cr-photo-pending' : ''}" role="group" aria-label="Фото: ${photos.length}">${photos.map(file => `<div class="cr-photo-tile"><button type="button" class="cr-photo-open" data-action="chatRefreshFile" data-id="${E(file.id)}" aria-label="Открыть фото ${E(file.name)}"><img src="${E(photoSource(file))}" alt="${E(file.name)}" decoding="async"/></button>${pending ? `<button type="button" class="cr-photo-remove" data-action="chatRefreshRemoveFile" data-id="${E(file.id)}" aria-label="Убрать ${E(file.name)}">${I('X')}</button>` : ''}</div>`).join('')}</div>` : '';
+    return grid + documents.map(file => attachment(file, pending)).join('');
+  }
+  async function prepareAttachment(file) {
+    const item = {id: uid(), name: file.name, size: file.size, type: file.type};
+    if (/^image\//i.test(file.type) && file.size <= 20 * 1024 * 1024) {
+      const url = URL.createObjectURL(file);
+      try {
+        const image = new Image(); image.src = url;
+        await image.decode();
+        const scale = Math.min(1, 960 / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        item.previewUrl = canvas.toDataURL('image/webp', .82);
+      } catch { /* Unsupported image formats remain downloadable file cards. */ }
+      finally { URL.revokeObjectURL(url); }
+    }
+    return item;
+  }
+  function bindDownload(file) {
+    const button = document.getElementById('cr-file-download');
+    if (!button || !files.has(file.id)) return;
+    button.onclick = () => {
+      const url = URL.createObjectURL(files.get(file.id)), link = document.createElement('a');
+      link.href = url; link.download = file.name; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+  }
   function renderMessage(item) {
     const pinned = data().pins.includes(item.id) && !item.deleted;
     const selecting = isSelecting(), selected = selecting && selection.ids.includes(item.id);
     const checkbox = selecting && !item.deleted ? `<label class="cr-message-select"><input id="cr-select-${E(item.id)}" type="checkbox" data-select-message="${E(item.id)}" aria-label="Выбрать сообщение от ${E(author(item))} в ${E(item.time)}: ${E(preview(item))}" ${selected ? 'checked' : ''}/><span aria-hidden="true">${I('Check')}</span></label>` : '';
-    return `<article class="chat-message cr-message ${item.own ? 'mine' : ''} ${selected ? 'cr-selected' : ''} ${focused?.key === scope() && focused.id === item.id ? 'cr-focused' : ''}" id="cr-${E(item.id)}" data-message-id="${E(item.id)}" tabindex="${item.deleted || selecting ? '-1' : '0'}" aria-label="Сообщение от ${E(author(item))} в ${E(item.time)}" ${item.deleted || selecting ? '' : 'aria-haspopup="dialog"'}>${item.own ? '' : avatar(item.initials, item.tone)}<div class="cr-message-content" ${selecting ? 'inert' : ''}><div class="bubble">${item.forwarded ? `<span class="cr-forwarded-label">${I('ArrowRight')}Переслано от ${E(item.forwarded)}</span>` : ''}${item.own ? '' : `<h4>${E(author(item))}</h4>`}${quote(item)}<div class="cr-message-text ${item.deleted ? 'muted' : ''}">${E(item.deleted ? 'Сообщение удалено' : item.text)}</div>${item.deleted ? '' : (item.attachments || []).map(file => attachment(file)).join('')}<footer class="cr-meta">${pinned ? `<span aria-label="Закреплено">${I('Pin')}</span>` : ''}${item.edited && !item.deleted ? '<span>изменено</span>' : ''}<time>${E(item.time)}</time>${item.own ? `<span aria-label="Отправлено">${I('CheckCheck')}</span>` : ''}</footer></div>${!item.deleted ? `<div class="cr-message-tools">${reactionOf(item) ? `<button class="chat-reaction" data-action="chatRefreshReaction" data-id="${E(item.id)}" aria-label="Убрать реакцию ${E(reactionOf(item))}" aria-pressed="true">${E(reactionOf(item))} <span>1</span></button>` : ''}<button class="icon-button cr-more" data-action="chatRefreshMenu" data-id="${E(item.id)}" aria-haspopup="dialog" aria-label="Действия с сообщением от ${E(author(item))} в ${E(item.time)}">${I('Ellipsis')}</button></div>` : ''}</div>${checkbox}</article>`;
+    return `<article class="chat-message cr-message ${item.own ? 'mine' : ''} ${selected ? 'cr-selected' : ''} ${focused?.key === scope() && focused.id === item.id ? 'cr-focused' : ''}" id="cr-${E(item.id)}" data-message-id="${E(item.id)}" tabindex="${item.deleted || selecting ? '-1' : '0'}" aria-label="Сообщение от ${E(author(item))} в ${E(item.time)}" ${item.deleted || selecting ? '' : 'aria-haspopup="dialog"'}>${item.own ? '' : avatar(item.initials, item.tone)}<div class="cr-message-content" ${selecting ? 'inert' : ''}><div class="bubble">${item.forwarded ? `<span class="cr-forwarded-label">${I('ArrowRight')}Переслано от ${E(item.forwarded)}</span>` : ''}${item.own ? '' : `<h4>${E(author(item))}</h4>`}${quote(item)}<div class="cr-message-text ${item.deleted ? 'muted' : ''}">${E(item.deleted ? 'Сообщение удалено' : item.text)}</div>${item.deleted ? '' : attachments(item.attachments)}<footer class="cr-meta">${pinned ? `<span aria-label="Закреплено">${I('Pin')}</span>` : ''}${item.edited && !item.deleted ? '<span>изменено</span>' : ''}<time>${E(item.time)}</time>${item.own ? `<span aria-label="Отправлено">${I('CheckCheck')}</span>` : ''}</footer></div>${!item.deleted ? `<div class="cr-message-tools">${reactionOf(item) ? `<button class="chat-reaction" data-action="chatRefreshReaction" data-id="${E(item.id)}" aria-label="Убрать реакцию ${E(reactionOf(item))}" aria-pressed="true">${E(reactionOf(item))} <span>1</span></button>` : ''}<button class="icon-button cr-more" data-action="chatRefreshMenu" data-id="${E(item.id)}" aria-haspopup="dialog" aria-label="Действия с сообщением от ${E(author(item))} в ${E(item.time)}">${I('Ellipsis')}</button></div>` : ''}</div>${checkbox}</article>`;
   }
   function pinBar() {
     const list = pins();
@@ -115,7 +156,7 @@
     const d = data(), group = c.kind === 'group', selecting = isSelecting();
     const visibleMessages = d.messages.filter(item => !item.hiddenForMe);
     const header = selecting ? selectionHeader() : `<button class="icon-button phone-back" data-go="messages" aria-label="Назад к чатам">${I('ArrowLeft')}</button><span class="chat-avatar ${group ? 'is-group' : ''}">${avatar(c.initials, c.tone, M.chatAvatarMarkup?.(c))}${group ? `<span class="group-avatar-badge" aria-label="Группа">${I('Users')}</span>` : ''}</span><div class="cr-contact-copy"><h3>${E(c.name)}${d.muted ? `<span class="cr-muted-indicator" aria-label="Уведомления выключены">${I('BellOff')}</span>` : ''}</h3><p>${group ? `Группа · ${memberCount(c.members.length)}` : 'В сети'}</p></div><span class="spacer"></span>${!group ? `<button class="icon-button personal-call-trigger" data-action="startPersonalCall" data-contact="${E(c.id)}" aria-label="Позвонить: ${E(c.name)}">${I('Phone')}</button>` : ''}<button class="icon-button" data-action="chatRefreshSearch" aria-label="Поиск в переписке">${I('Search')}</button><div class="cr-header-actions"><button class="icon-button cr-header-menu-trigger" data-action="chatRefreshHeader" aria-label="Действия с чатом" aria-haspopup="menu" aria-expanded="false" aria-controls="cr-chat-dropdown">${I('Ellipsis')}</button></div>`;
-    return `<section class="thread cr-thread ${selecting ? 'cr-selecting' : ''}"><header class="thread-header">${header}</header>${M.renderPersonalCallBanner?.(c) || ''}${pinBar()}<div class="thread-log" id="thread-log" aria-label="Сообщения"><div class="chat-date">${c.created ? 'Вы создали группу' : 'Сегодня, 16 октября'}</div>${selecting ? '<p class="cr-gesture-hint">Нажмите на сообщения для выбора</p>' : visibleMessages.some(item => !item.deleted) ? '<p class="cr-gesture-hint">Удерживайте сообщение, чтобы открыть действия</p>' : ''}${visibleMessages.map(renderMessage).join('') || `<div class="group-welcome">${avatar(c.initials, c.tone, M.chatAvatarMarkup?.(c))}<h3>${E(c.name)}</h3><p>Напишите первое сообщение.</p></div>`}</div>${focused?.key === scope() ? '<div class="cr-context-return"><button data-action="chatRefreshLatest">К последним сообщениям ↓</button></div>' : ''}${selecting ? selectionToolbar() : `<div class="thread-create-actions"><button class="button primary" type="button" data-action="newChat" aria-label="Новый чат">${I('Plus')}Новый чат</button></div><div class="cr-composer-shell">${composerContext()}${!d.editing && d.pending.length ? `<div class="cr-pending-files">${d.pending.map(file => attachment(file, true)).join('')}</div>` : ''}<form class="composer" id="message-form"><button class="icon-button" type="button" data-action="chatRefreshAttach" aria-label="Прикрепить файлы" ${d.editing ? 'disabled' : ''}>${I('Paperclip')}</button><textarea id="message-input" rows="1" maxlength="10000" autocomplete="off" aria-label="${d.editing ? 'Редактировать сообщение' : 'Сообщение'}" placeholder="Написать сообщение…">${E(d.editing ? d.editText : d.draft)}</textarea><button class="icon-button send-button" aria-label="${d.editing ? 'Сохранить сообщение' : 'Отправить сообщение'}" ${canSend() ? '' : 'disabled'}>${I(d.editing ? 'Check' : 'ArrowUp')}</button></form></div>`}</section>`;
+    return `<section class="thread cr-thread ${selecting ? 'cr-selecting' : ''}"><header class="thread-header">${header}</header>${M.renderPersonalCallBanner?.(c) || ''}${pinBar()}<div class="thread-log" id="thread-log" aria-label="Сообщения"><div class="chat-date">${c.created ? 'Вы создали группу' : 'Сегодня, 16 октября'}</div>${selecting ? '<p class="cr-gesture-hint">Нажмите на сообщения для выбора</p>' : visibleMessages.some(item => !item.deleted) ? '<p class="cr-gesture-hint">Удерживайте сообщение, чтобы открыть действия</p>' : ''}${visibleMessages.map(renderMessage).join('') || `<div class="group-welcome">${avatar(c.initials, c.tone, M.chatAvatarMarkup?.(c))}<h3>${E(c.name)}</h3><p>Напишите первое сообщение.</p></div>`}</div>${focused?.key === scope() ? '<div class="cr-context-return"><button data-action="chatRefreshLatest">К последним сообщениям ↓</button></div>' : ''}${selecting ? selectionToolbar() : `<div class="thread-create-actions"><button class="button primary" type="button" data-action="newChat" aria-label="Новый чат">${I('Plus')}Новый чат</button></div><div class="cr-composer-shell">${composerContext()}${!d.editing && d.pending.length ? `<div class="cr-pending-files">${attachments(d.pending, true)}</div>` : ''}<form class="composer" id="message-form"><button class="icon-button" type="button" data-action="chatRefreshAttach" aria-label="Прикрепить файлы" ${d.editing ? 'disabled' : ''}>${I('Paperclip')}</button><textarea id="message-input" rows="1" maxlength="10000" autocomplete="off" aria-label="${d.editing ? 'Редактировать сообщение' : 'Сообщение'}" placeholder="Написать сообщение…">${E(d.editing ? d.editText : d.draft)}</textarea><button class="icon-button send-button" aria-label="${d.editing ? 'Сохранить сообщение' : 'Отправить сообщение'}" ${canSend() ? '' : 'disabled'}>${I(d.editing ? 'Check' : 'ArrowUp')}</button></form></div>`}</section>`;
   };
   function canSend() {
     const d = data();
@@ -207,7 +248,7 @@
     log.addEventListener('pointerdown',event=>{
       cancel();suppressClick=false;
       const article=event.target.closest('.cr-message');
-      if(event.button!==0||!article||event.target.closest('button,a,input')||!message(article.dataset.messageId)||message(article.dataset.messageId).deleted)return;
+      if(event.button!==0||!article||(event.target.closest('button,a,input')&&!event.target.closest('.cr-photo-open'))||!message(article.dataset.messageId)||message(article.dataset.messageId).deleted)return;
       origin={x:event.clientX,y:event.clientY};
       const key=scope();
       hold=setTimeout(()=>{hold=null;origin=null;if(!article.isConnected||scope()!==key)return;suppressClick=true;openMenu(article.dataset.messageId);},500);
@@ -217,7 +258,7 @@
     log.addEventListener('scroll',cancel,{passive:true});
     log.addEventListener('click',event=>{if(suppressClick){event.preventDefault();event.stopPropagation();suppressClick=false;}},true);
     log.addEventListener('contextmenu',event=>{
-      const article=event.target.closest('.cr-message');if(!article||event.target.closest('button,a'))return;
+      const article=event.target.closest('.cr-message');if(!article||(event.target.closest('button,a')&&!event.target.closest('.cr-photo-open')))return;
       if(message(article.dataset.messageId)?.deleted)return;
       event.preventDefault();cancel();openMenu(article.dataset.messageId);
     });
@@ -392,21 +433,51 @@
     chatRefreshAttach: () => {
       const key = scope();
       M.modal('Прикрепить файлы', `<div class="stack"><label class="cr-file-picker">${I('Upload')}<strong>Выберите файлы</strong><span>Документы, изображения и видео</span><input id="cr-file-picker" type="file" multiple/></label><p class="muted">Файлы появятся в сообщении после отправки.</p><p id="cr-files-summary" aria-live="polite"></p><button id="cr-files-add" class="button primary" disabled>Добавить к сообщению</button></div>`, () => {
-        let selected = [];
-        document.getElementById('cr-file-picker').onchange = event => {selected = [...event.target.files].slice(0, 10); document.getElementById('cr-files-summary').textContent = selected.map(file => file.name).join(', '); document.getElementById('cr-files-add').disabled = !selected.length;};
-        document.getElementById('cr-files-add').onclick = () => {if (key !== scope()) return; const d = data(); for (const file of selected) {const id = uid(); files.set(id, file); d.pending.push({id, name: file.name, size: file.size});} M.closeModal(); redraw({focus: true});};
+        let selected = [], preparing = false;
+        const input = document.getElementById('cr-file-picker');
+        input.onchange = event => {
+          if (preparing) return;
+          selected = [...event.target.files].slice(0, 10);
+          document.getElementById('cr-files-summary').textContent = selected.map(file => file.name).join(', ');
+          document.getElementById('cr-files-add').disabled = !selected.length;
+        };
+        document.getElementById('cr-files-add').onclick = async () => {
+          if (preparing || key !== scope() || !selected.length) return;
+          const button = document.getElementById('cr-files-add'), chosen = [...selected];
+          preparing = true; input.disabled = true;
+          button.disabled = true; button.textContent = 'Подготовка…';
+          try {
+            const prepared = await Promise.all(chosen.map(prepareAttachment));
+            if (key !== scope() || !button.isConnected) return;
+            prepared.forEach((item, index) => files.set(item.id, chosen[index]));
+            data().pending.push(...prepared); M.closeModal(); redraw({focus: true});
+          } catch {
+            if (button.isConnected) document.getElementById('cr-files-summary').textContent = 'Не удалось подготовить файлы. Попробуйте ещё раз.';
+          } finally {
+            preparing = false;
+            if (button.isConnected) { input.disabled = false; button.disabled = !selected.length; button.textContent = 'Добавить к сообщению'; }
+          }
+        };
       });
     },
     chatRefreshRemoveFile: button => {data().pending = data().pending.filter(file => file.id !== button.dataset.id); files.delete(button.dataset.id); redraw({focus: true});},
     chatRefreshFile: button => {
-      const file = data().messages.filter(item => !item.deleted && !item.hiddenForMe).flatMap(item => item.attachments || []).find(item => item.id === button.dataset.id); if (!file) return;
+      const d = data();
+      const file = [...d.pending, ...d.messages.filter(item => !item.deleted && !item.hiddenForMe).flatMap(item => item.attachments || [])].find(item => item.id === button.dataset.id); if (!file) return;
+      const source = photoSource(file);
+      if (source) {
+        M.modal(E(file.name), `<div class="cr-photo-viewer"><img src="${E(source)}" alt="${E(file.name)}"/><span>${E(file.name)} · ${formatSize(file.size)}</span>${files.has(file.id) ? '<button id="cr-file-download" class="button primary">Скачать фото</button>' : ''}</div>`, () => {
+          document.querySelector('.modal').classList.add('cr-photo-modal');
+          bindDownload(file);
+        });
+        return;
+      }
       M.modal(E(file.name), `<div class="stack"><span class="badge blue">${I('FileText')}${formatSize(file.size)}</span><p>${file.demo ? 'Материалы к дизайн-синхронизации: навигация, первый запуск и встреча на планшете.' : 'Файл прикреплён к сообщению.'}</p>${files.has(file.id) ? '<button id="cr-file-download" class="button primary">Скачать файл</button>' : '<p class="muted">Демонстрационная карточка вложения.</p>'}<button class="button secondary" data-close>Закрыть</button></div>`, () => {
-        const download = document.getElementById('cr-file-download'); if (!download) return;
-        download.onclick = () => {const url = URL.createObjectURL(files.get(file.id)), link = document.createElement('a'); link.href = url; link.download = file.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);};
+        bindDownload(file);
       });
     }
   });
-  // При синхронизации галереи передаются данные фикстуры, а не байты из локальных файлов.
+  // Синхронизация передаёт компактные фото-превью; исходные файлы остаются в текущем окне.
   M.chatRefreshSnapshot = () => ({
     threads: copy(threads),
     contacts: copy((M.chatContacts?.() || []).filter(person => person.created)),

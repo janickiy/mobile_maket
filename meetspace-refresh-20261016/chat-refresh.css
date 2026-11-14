@@ -38,6 +38,27 @@
 .cr-attachment small { display: block; text-align: left; margin-top: 2px; font-size: 10px; color: var(--muted); }
 .cr-attachment .icon-button { width: 33px; height: 33px; min-width: 33px; flex-shrink: 0; }
 .cr-attachment .icon-button svg { width: 18px; height: 18px; }
+.cr-photo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; width: 260px; max-width: 100%; margin: 10px 0 0 auto; overflow: hidden; border-radius: 12px; }
+.cr-photo-tile { position: relative; min-width: 0; overflow: hidden; aspect-ratio: 4 / 3; background: var(--surface2); }
+.cr-photo-open { display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: zoom-in; }
+.cr-photo-open img { display: block; width: 100%; height: 100%; object-fit: cover; transition: filter .15s ease; }
+.cr-photo-open:hover img { filter: brightness(.93); }
+.cr-photo-open:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.cr-photo-single { grid-template-columns: minmax(0, 1fr); width: 240px; }
+.cr-photo-single .cr-photo-tile { aspect-ratio: 16 / 10; }
+.cr-photo-triple { aspect-ratio: 3 / 2; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.cr-photo-triple .cr-photo-tile { aspect-ratio: auto; }
+.cr-photo-triple .cr-photo-tile:first-child { grid-row: span 2; }
+.cr-pending-files .cr-photo-pending { display: flex; flex: 1 0 100%; flex-wrap: wrap; width: 100%; aspect-ratio: auto; gap: 8px; margin-top: 9px; overflow: visible; }
+.cr-photo-pending .cr-photo-tile { flex: 0 0 82px; height: 82px; aspect-ratio: 1; border-radius: 10px; }
+.cr-photo-remove { position: absolute; top: 3px; right: 3px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid #ffffff66; border-radius: 50%; background: #142039bb; color: white; }
+.cr-photo-remove svg { width: 16px; height: 16px; }
+.cr-photo-remove:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.modal.cr-photo-modal { max-width: 780px; }
+.cr-photo-modal .modal-head h2 { overflow-wrap: anywhere; font-size: 17px; }
+.cr-photo-viewer { display: flex; flex-direction: column; gap: 12px; }
+.cr-photo-viewer img { display: block; width: 100%; max-height: calc(100dvh - 200px); object-fit: contain; border-radius: 12px; background: var(--bg); }
+.cr-photo-viewer > span { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
 .cr-composer-shell { flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--line); }
 .cr-composer-shell .composer { border-top: 0; padding: 12px 14px; gap: 10px; align-items: flex-end; }
 .cr-composer-shell textarea { flex: 1; width: 100%; min-width: 0; min-height: 48px; resize: none; padding: 14px 12px; font: inherit; font-size: 13px; line-height: 20px; color: var(--ink); border: 0; border-radius: 12px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
