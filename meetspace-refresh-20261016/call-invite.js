@@ -20,6 +20,7 @@
       <path fill="#211927" d="${modules.join("")}"/>
     </svg>`;
   }
+  M.renderMeetingInviteQR = invitationQR;
 
   async function copyLink(link, onBlocked) {
     try {

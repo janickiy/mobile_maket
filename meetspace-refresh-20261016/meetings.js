@@ -301,8 +301,9 @@
       const link = `https://meet.example.org/room/${m.id}`;
       M.modal(
         "Пригласить на встречу",
-        `<div class="stack"><h3>${E(m.title)}</h3><label class="field">Ссылка-приглашение<input id="conference-invite" readonly value="${E(link)}"/></label><button class="button primary" id="copy-conference-invite">${I("Copy")}Скопировать ссылку</button><p class="cf-form-note">Демонстрационная ссылка для макета.</p></div>`,
+        `<div class="cf-invite-layout"><div class="stack"><h3>${E(m.title)}</h3><label class="field">Ссылка-приглашение<input id="conference-invite" readonly value="${E(link)}"/></label><button class="button primary" id="copy-conference-invite">${I("Copy")}Скопировать ссылку</button><p class="cf-form-note">Демонстрационная ссылка для макета.</p></div><figure class="cf-invite-qr"><div class="cf-invite-code">${M.renderMeetingInviteQR(link)}</div><figcaption><strong>Подключиться с телефона</strong><span>Наведите камеру на QR-код</span></figcaption></figure></div>`,
         () => {
+          document.querySelector(".modal").classList.add("cf-invite-modal");
           document.getElementById("copy-conference-invite").onclick =
             async () => {
               try {
