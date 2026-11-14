@@ -3,7 +3,7 @@
   'use strict';
   const M = window.MS, E = value => M.escape(value ?? ''), I = name => M.icon(name);
   const copy = value => JSON.parse(JSON.stringify(value));
-  let threads = {}, focused = null, forwarding = null;
+  let threads = {}, focused = null, forwarding = null, selection = null;
   const reactions = [['👍','Нравится'],['❤️','Любовь'],['😂','Смешно'],['😮','Удивление'],['😢','Грусть'],['🙏','Спасибо']];
   const reactionOf = item => reactions.some(([emoji]) => emoji === item.reaction) ? item.reaction : item.reaction === true ? '👍' : '';
   const files = new Map();
@@ -33,7 +33,55 @@
     }
     return threads[key];
   }
-  const message = id => data().messages.find(item => item.id === id);
+  const message = id => data().messages.find(item => item.id === id && !item.hiddenForMe);
+  const isSelecting = () => selection?.key === scope() && ['messages', 'thread'].includes(M.state.screen);
+  const selectableMessages = () => data().messages.filter(item => !item.deleted && !item.hiddenForMe);
+  const selectedMessages = () => isSelecting() ? selection.ids.map(message).filter(item => item && !item.deleted) : [];
+  function selectionHeader() {
+    const count = selectedMessages().length, all = count > 0 && count === selectableMessages().length;
+    return `<button class="icon-button" data-action="chatRefreshExitSelection" aria-label="Отменить выбор сообщений">${I('X')}</button><div class="cr-selection-heading"><strong role="status" aria-live="polite">Выбрано: ${count}</strong><small>Выберите сообщения</small></div><button class="button quiet cr-select-all" data-action="chatRefreshSelectAll">${all ? 'Снять выбор' : 'Выбрать все'}</button>`;
+  }
+  function selectionToolbar() {
+    const count = selectedMessages().length;
+    return `<div class="cr-selection-actions"><span>Выбрано: ${count}</span><button class="button cr-delete-button" data-action="chatRefreshDeleteSelected" ${count ? '' : 'disabled'}>${I('Trash2')}Удалить (${count})</button></div>`;
+  }
+  function startSelection(id) {
+    const item = id ? message(id) : null;
+    if (id && (!item || item.deleted)) return;
+    selection = {key: scope(), ids: item ? [id] : []};
+    M.closeModal(); redraw();
+    document.querySelector(item ? `#cr-select-${CSS.escape(id)}` : '.cr-select-all')?.focus({preventScroll: true});
+  }
+  function toggleSelection(id, checked) {
+    const item = message(id);
+    if (!isSelecting() || !item || item.deleted) return;
+    const next = checked ?? !selection.ids.includes(id);
+    selection.ids = selection.ids.filter(value => value !== id);
+    if (next) selection.ids.push(id);
+    redraw();
+    document.getElementById('cr-select-' + id)?.focus({preventScroll: true});
+  }
+  function exitSelection() {
+    selection = null; redraw({focus: true});
+  }
+  function confirmDeleteSelected() {
+    const key = scope(), ids = selectedMessages().map(item => item.id);
+    if (!ids.length) return;
+    M.modal('Удалить выбранные сообщения?', `<div class="stack"><p>Выбрано сообщений: <strong>${ids.length}</strong>.</p><p>Сообщения будут удалены только из вашей истории. У других участников они останутся.</p><button id="cr-delete-selected-confirm" class="button cr-delete-button">${I('Trash2')}Удалить у меня (${ids.length})</button><button class="button secondary" data-close>Отмена</button></div>`, () => {
+      document.getElementById('cr-delete-selected-confirm').onclick = () => {
+        if (scope() !== key || !isSelecting()) { M.closeModal(); return; }
+        const current = ids.map(message).filter(item => item && !item.deleted), removed = new Set(current.map(item => item.id));
+        const d = data();
+        current.forEach(item => { item.hiddenForMe = true; });
+        d.pins = d.pins.filter(id => !removed.has(id));
+        if (removed.has(d.reply)) d.reply = null;
+        if (removed.has(d.editing)) { d.editing = null; d.editText = ''; }
+        focused = null; selection = null;
+        updatePreview(); M.closeModal(); redraw({focus: true});
+        M.toast(`Удалено сообщений: ${current.length}`);
+      };
+    });
+  }
   const pins = () => data().pins.map(message).filter(item => item && !item.deleted);
   const avatar = (name, tone = '', content = '') => `<span class="avatar ${E(tone)}">${content || E(name)}</span>`;
   const jumpButton = (item, cls = '') => `<button class="${cls}" data-action="chatRefreshJump" data-id="${E(item.id)}"><strong>${E(author(item))}</strong><span>${E(preview(item))}</span></button>`;
@@ -47,7 +95,9 @@
   }
   function renderMessage(item) {
     const pinned = data().pins.includes(item.id) && !item.deleted;
-    return `<article class="chat-message cr-message ${item.own ? 'mine' : ''} ${focused?.key === scope() && focused.id === item.id ? 'cr-focused' : ''}" id="cr-${E(item.id)}" data-message-id="${E(item.id)}" tabindex="${item.deleted ? '-1' : '0'}" aria-label="Сообщение от ${E(author(item))} в ${E(item.time)}" ${item.deleted ? '' : 'aria-haspopup="dialog"'}>${item.own ? '' : avatar(item.initials, item.tone)}<div class="cr-message-content"><div class="bubble">${item.forwarded ? `<span class="cr-forwarded-label">${I('ArrowRight')}Переслано от ${E(item.forwarded)}</span>` : ''}${item.own ? '' : `<h4>${E(author(item))}</h4>`}${quote(item)}<div class="cr-message-text ${item.deleted ? 'muted' : ''}">${E(item.deleted ? 'Сообщение удалено' : item.text)}</div>${item.deleted ? '' : (item.attachments || []).map(file => attachment(file)).join('')}<footer class="cr-meta">${pinned ? `<span aria-label="Закреплено">${I('Pin')}</span>` : ''}${item.edited && !item.deleted ? '<span>изменено</span>' : ''}<time>${E(item.time)}</time>${item.own ? `<span aria-label="Отправлено">${I('CheckCheck')}</span>` : ''}</footer></div>${!item.deleted ? `<div class="cr-message-tools">${reactionOf(item) ? `<button class="chat-reaction" data-action="chatRefreshReaction" data-id="${E(item.id)}" aria-label="Убрать реакцию ${E(reactionOf(item))}" aria-pressed="true">${E(reactionOf(item))} <span>1</span></button>` : ''}<button class="icon-button cr-more" data-action="chatRefreshMenu" data-id="${E(item.id)}" aria-haspopup="dialog" aria-label="Действия с сообщением от ${E(author(item))} в ${E(item.time)}">${I('Ellipsis')}</button></div>` : ''}</div></article>`;
+    const selecting = isSelecting(), selected = selecting && selection.ids.includes(item.id);
+    const checkbox = selecting && !item.deleted ? `<label class="cr-message-select"><input id="cr-select-${E(item.id)}" type="checkbox" data-select-message="${E(item.id)}" aria-label="Выбрать сообщение от ${E(author(item))} в ${E(item.time)}: ${E(preview(item))}" ${selected ? 'checked' : ''}/><span aria-hidden="true">${I('Check')}</span></label>` : '';
+    return `<article class="chat-message cr-message ${item.own ? 'mine' : ''} ${selected ? 'cr-selected' : ''} ${focused?.key === scope() && focused.id === item.id ? 'cr-focused' : ''}" id="cr-${E(item.id)}" data-message-id="${E(item.id)}" tabindex="${item.deleted || selecting ? '-1' : '0'}" aria-label="Сообщение от ${E(author(item))} в ${E(item.time)}" ${item.deleted || selecting ? '' : 'aria-haspopup="dialog"'}>${item.own ? '' : avatar(item.initials, item.tone)}<div class="cr-message-content" ${selecting ? 'inert' : ''}><div class="bubble">${item.forwarded ? `<span class="cr-forwarded-label">${I('ArrowRight')}Переслано от ${E(item.forwarded)}</span>` : ''}${item.own ? '' : `<h4>${E(author(item))}</h4>`}${quote(item)}<div class="cr-message-text ${item.deleted ? 'muted' : ''}">${E(item.deleted ? 'Сообщение удалено' : item.text)}</div>${item.deleted ? '' : (item.attachments || []).map(file => attachment(file)).join('')}<footer class="cr-meta">${pinned ? `<span aria-label="Закреплено">${I('Pin')}</span>` : ''}${item.edited && !item.deleted ? '<span>изменено</span>' : ''}<time>${E(item.time)}</time>${item.own ? `<span aria-label="Отправлено">${I('CheckCheck')}</span>` : ''}</footer></div>${!item.deleted ? `<div class="cr-message-tools">${reactionOf(item) ? `<button class="chat-reaction" data-action="chatRefreshReaction" data-id="${E(item.id)}" aria-label="Убрать реакцию ${E(reactionOf(item))}" aria-pressed="true">${E(reactionOf(item))} <span>1</span></button>` : ''}<button class="icon-button cr-more" data-action="chatRefreshMenu" data-id="${E(item.id)}" aria-haspopup="dialog" aria-label="Действия с сообщением от ${E(author(item))} в ${E(item.time)}">${I('Ellipsis')}</button></div>` : ''}</div>${checkbox}</article>`;
   }
   function pinBar() {
     const list = pins();
@@ -61,8 +111,11 @@
   M.chatIsMuted = c => Boolean(threads[scope(c.id)]?.muted);
   M.renderChatThread = c => {
     if (!M.chatIsVisible(c)) return `<section class="thread cr-thread cr-chat-empty"><span>${I('MessagesSquare')}</span><h3>Выберите чат</h3><p>Откройте переписку из списка или начните новую.</p><button class="button primary" data-action="newChat">${I('Plus')}Новый чат</button></section>`;
-    const d = data(), group = c.kind === 'group';
-    return `<section class="thread cr-thread"><header class="thread-header"><button class="icon-button phone-back" data-go="messages" aria-label="Назад к чатам">${I('ArrowLeft')}</button><span class="chat-avatar ${group ? 'is-group' : ''}">${avatar(c.initials, c.tone, M.chatAvatarMarkup?.(c))}${group ? `<span class="group-avatar-badge" aria-label="Группа">${I('Users')}</span>` : ''}</span><div class="cr-contact-copy"><h3>${E(c.name)}${d.muted ? `<span class="cr-muted-indicator" aria-label="Уведомления выключены">${I('BellOff')}</span>` : ''}</h3><p>${group ? `Группа · ${memberCount(c.members.length)}` : 'В сети'}</p></div><span class="spacer"></span>${!group ? `<button class="icon-button personal-call-trigger" data-action="startPersonalCall" data-contact="${E(c.id)}" aria-label="Позвонить: ${E(c.name)}">${I('Phone')}</button>` : ''}<button class="icon-button" data-action="chatRefreshSearch" aria-label="Поиск в переписке">${I('Search')}</button><div class="cr-header-actions"><button class="icon-button cr-header-menu-trigger" data-action="chatRefreshHeader" aria-label="Действия с чатом" aria-haspopup="menu" aria-expanded="false" aria-controls="cr-chat-dropdown">${I('Ellipsis')}</button></div></header>${M.renderPersonalCallBanner?.(c) || ''}${pinBar()}<div class="thread-log" id="thread-log" aria-label="Сообщения"><div class="chat-date">${c.created ? 'Вы создали группу' : 'Сегодня, 16 октября'}</div>${d.messages.some(item => !item.deleted) ? '<p class="cr-gesture-hint">Удерживайте сообщение, чтобы открыть действия</p>' : ''}${d.messages.map(renderMessage).join('') || `<div class="group-welcome">${avatar(c.initials, c.tone, M.chatAvatarMarkup?.(c))}<h3>${E(c.name)}</h3><p>Напишите первое сообщение.</p></div>`}</div>${focused?.key === scope() ? '<div class="cr-context-return"><button data-action="chatRefreshLatest">К последним сообщениям ↓</button></div>' : ''}<div class="thread-create-actions"><button class="button primary" type="button" data-action="newChat" aria-label="Новый чат">${I('Plus')}Новый чат</button></div><div class="cr-composer-shell">${composerContext()}${!d.editing && d.pending.length ? `<div class="cr-pending-files">${d.pending.map(file => attachment(file, true)).join('')}</div>` : ''}<form class="composer" id="message-form"><button class="icon-button" type="button" data-action="chatRefreshAttach" aria-label="Прикрепить файлы" ${d.editing ? 'disabled' : ''}>${I('Paperclip')}</button><textarea id="message-input" rows="1" maxlength="10000" autocomplete="off" aria-label="${d.editing ? 'Редактировать сообщение' : 'Сообщение'}" placeholder="Написать сообщение…">${E(d.editing ? d.editText : d.draft)}</textarea><button class="icon-button send-button" aria-label="${d.editing ? 'Сохранить сообщение' : 'Отправить сообщение'}" ${canSend() ? '' : 'disabled'}>${I(d.editing ? 'Check' : 'ArrowUp')}</button></form></div></section>`;
+    if (selection && selection.key !== scope()) selection = null;
+    const d = data(), group = c.kind === 'group', selecting = isSelecting();
+    const visibleMessages = d.messages.filter(item => !item.hiddenForMe);
+    const header = selecting ? selectionHeader() : `<button class="icon-button phone-back" data-go="messages" aria-label="Назад к чатам">${I('ArrowLeft')}</button><span class="chat-avatar ${group ? 'is-group' : ''}">${avatar(c.initials, c.tone, M.chatAvatarMarkup?.(c))}${group ? `<span class="group-avatar-badge" aria-label="Группа">${I('Users')}</span>` : ''}</span><div class="cr-contact-copy"><h3>${E(c.name)}${d.muted ? `<span class="cr-muted-indicator" aria-label="Уведомления выключены">${I('BellOff')}</span>` : ''}</h3><p>${group ? `Группа · ${memberCount(c.members.length)}` : 'В сети'}</p></div><span class="spacer"></span>${!group ? `<button class="icon-button personal-call-trigger" data-action="startPersonalCall" data-contact="${E(c.id)}" aria-label="Позвонить: ${E(c.name)}">${I('Phone')}</button>` : ''}<button class="icon-button" data-action="chatRefreshSearch" aria-label="Поиск в переписке">${I('Search')}</button><div class="cr-header-actions"><button class="icon-button cr-header-menu-trigger" data-action="chatRefreshHeader" aria-label="Действия с чатом" aria-haspopup="menu" aria-expanded="false" aria-controls="cr-chat-dropdown">${I('Ellipsis')}</button></div>`;
+    return `<section class="thread cr-thread ${selecting ? 'cr-selecting' : ''}"><header class="thread-header">${header}</header>${M.renderPersonalCallBanner?.(c) || ''}${pinBar()}<div class="thread-log" id="thread-log" aria-label="Сообщения"><div class="chat-date">${c.created ? 'Вы создали группу' : 'Сегодня, 16 октября'}</div>${selecting ? '<p class="cr-gesture-hint">Нажмите на сообщения для выбора</p>' : visibleMessages.some(item => !item.deleted) ? '<p class="cr-gesture-hint">Удерживайте сообщение, чтобы открыть действия</p>' : ''}${visibleMessages.map(renderMessage).join('') || `<div class="group-welcome">${avatar(c.initials, c.tone, M.chatAvatarMarkup?.(c))}<h3>${E(c.name)}</h3><p>Напишите первое сообщение.</p></div>`}</div>${focused?.key === scope() ? '<div class="cr-context-return"><button data-action="chatRefreshLatest">К последним сообщениям ↓</button></div>' : ''}${selecting ? selectionToolbar() : `<div class="thread-create-actions"><button class="button primary" type="button" data-action="newChat" aria-label="Новый чат">${I('Plus')}Новый чат</button></div><div class="cr-composer-shell">${composerContext()}${!d.editing && d.pending.length ? `<div class="cr-pending-files">${d.pending.map(file => attachment(file, true)).join('')}</div>` : ''}<form class="composer" id="message-form"><button class="icon-button" type="button" data-action="chatRefreshAttach" aria-label="Прикрепить файлы" ${d.editing ? 'disabled' : ''}>${I('Paperclip')}</button><textarea id="message-input" rows="1" maxlength="10000" autocomplete="off" aria-label="${d.editing ? 'Редактировать сообщение' : 'Сообщение'}" placeholder="Написать сообщение…">${E(d.editing ? d.editText : d.draft)}</textarea><button class="icon-button send-button" aria-label="${d.editing ? 'Сохранить сообщение' : 'Отправить сообщение'}" ${canSend() ? '' : 'disabled'}>${I(d.editing ? 'Check' : 'ArrowUp')}</button></form></div>`}</section>`;
   };
   function canSend() {
     const d = data();
@@ -86,10 +139,11 @@
   M.chatPreview = c => {
     const thread = threads[`${M.accountManagerSnapshot?.().activeId || 'personal'}:${c.id}`];
     if (!thread?.updated) return null;
-    const last = [...thread.messages].reverse().find(item => !item.deleted);
+    const last = [...thread.messages].reverse().find(item => !item.deleted && !item.hiddenForMe);
     return {text: last ? `${author(last)}: ${preview(last)}` : 'Пока нет сообщений', time: 'Сейчас'};
   };
   M.bindChatThread = () => {
+    bindMessageGestures();
     const input = document.getElementById('message-input'), form = document.getElementById('message-form');
     if (!input || !form) return;
     input.addEventListener('input', () => {
@@ -114,7 +168,6 @@
       }
       focused = null; updatePreview(); redraw({focus: true, latest: true});
     });
-    bindMessageGestures();
     resize();
   };
   function jump(id) {
@@ -137,6 +190,18 @@
   }
   function bindMessageGestures() {
     const log=document.getElementById('thread-log'); if(!log)return;
+    if (isSelecting()) {
+      log.addEventListener('change', event => {
+        if (event.target.matches('[data-select-message]')) toggleSelection(event.target.dataset.selectMessage, event.target.checked);
+      });
+      log.addEventListener('click', event => {
+        const article = event.target.closest('.cr-message');
+        if (!article || event.target.closest('.cr-message-select')) return;
+        event.preventDefault(); event.stopPropagation();
+        toggleSelection(article.dataset.messageId);
+      }, true);
+      return;
+    }
     let hold=null, origin=null, suppressClick=false;
     const cancel=()=>{clearTimeout(hold);hold=null;origin=null;};
     log.addEventListener('pointerdown',event=>{
@@ -165,7 +230,7 @@
     const item = message(id); if (!item || item.deleted) return;
     const article=document.getElementById('cr-'+id), anchor=article?.querySelector('.bubble')?.getBoundingClientRect();
     if(!anchor)return;
-    const options = [['Reply','chatRefreshReply','Ответить'],['Copy','chatRefreshCopy','Копировать'],['ArrowRight','chatRefreshForward','Переслать'],['Share2','chatRefreshShare','Поделиться'],['Pin','chatRefreshPin',data().pins.includes(id)?'Открепить':'Закрепить']];
+    const options = [['Reply','chatRefreshReply','Ответить'],['Copy','chatRefreshCopy','Копировать'],['ArrowRight','chatRefreshForward','Переслать'],['Share2','chatRefreshShare','Поделиться'],['CircleCheck','chatRefreshSelect','Выбрать'],['Pin','chatRefreshPin',data().pins.includes(id)?'Открепить':'Закрепить']];
     if(item.own)options.push(['Pencil','chatRefreshEdit','Изменить'],['Trash2','chatRefreshDelete','Удалить']);
     M.closeModal();M.opener=article;
     document.getElementById('dialog-root').innerHTML=`<div class="modal-backdrop cr-message-backdrop"><section class="modal cr-message-popover" role="dialog" aria-modal="true" aria-labelledby="cr-message-title"><div class="cr-context-caption"><h2 id="cr-message-title">Действия с сообщением</h2><button class="icon-button" data-close aria-label="Закрыть действия с сообщением">${I('X')}</button></div><div class="cr-quick-reactions" role="group" aria-label="Быстрые реакции">${reactions.map(([emoji,label])=>`<button data-action="chatRefreshReaction" data-id="${E(id)}" data-emoji="${E(emoji)}" aria-label="${E(label)} ${emoji}" aria-pressed="${reactionOf(item)===emoji}">${emoji}</button>`).join('')}</div><div class="cr-selected-preview ${item.own?'mine':''}"><strong>${E(author(item))}</strong><p>${E(item.text)}</p>${item.attachments?.length?`<span class="cr-preview-attachment">${I('Paperclip')}${E(item.attachments[0].name)}${item.attachments.length>1?` · ещё ${item.attachments.length-1}`:''}</span>`:''}<small>${item.edited?'изменено · ':''}${E(item.time)}${item.own?' · ✓✓':''}</small></div><div class="cr-context-actions">${options.map(([icon,action,label])=>`<button class="${action==='chatRefreshDelete'?'cr-danger':''}" data-action="${action}" data-id="${E(id)}">${I(icon)}<span>${label}</span></button>`).join('')}</div></section></div>`;
@@ -239,7 +304,7 @@
   function searchResults(query) {
     query = query.trim().toLocaleLowerCase('ru');
     if (!query) return '<p class="cr-search-hint">Поиск по тексту сообщений и названиям файлов.</p>';
-    const found = data().messages.filter(item => !item.deleted && [item.text, ...(item.attachments || []).map(file => file.name)].join(' ').toLocaleLowerCase('ru').includes(query));
+    const found = data().messages.filter(item => !item.deleted && !item.hiddenForMe && [item.text, ...(item.attachments || []).map(file => file.name)].join(' ').toLocaleLowerCase('ru').includes(query));
     return `<p class="cr-search-hint">${found.length ? `Найдено: ${found.length}` : 'Ничего не найдено. Попробуйте другой запрос.'}</p>${found.map(item => `<button class="cr-search-result" data-action="chatRefreshJump" data-id="${E(item.id)}"><span><strong>${E(author(item))}</strong><time>${E(item.time)}</time></span><p>${E(preview(item))}</p></button>`).join('')}`;
   }
   function closeHeaderMenu(restoreFocus = false) {
@@ -254,11 +319,13 @@
     const wrapper=document.querySelector('.cr-header-actions'); if (!wrapper) return;
     const options=contact()?.kind === 'group' ? [
       ['Info','chatInfo','Информация'],
+      ['CircleCheck','chatRefreshSelect','Выбрать сообщения'],
       ...(M.canEditGroup?.(contact()) ? [['Pencil','groupEdit','Редактировать группу']] : []),
       ['FolderPlus','folderAssign','Добавить в папку'],
       ['LogOut','chatRefreshLeaveGroup','Покинуть группу']
     ] : [
       ['Info','chatInfo','Информация'],
+      ['CircleCheck','chatRefreshSelect','Выбрать сообщения'],
       [data().muted ? 'Bell' : 'BellOff','chatRefreshMute',data().muted ? 'Включить уведомления' : 'Без уведомлений'],
       ['FolderPlus','folderAssign','Добавить в папку'],
       ['Eraser','chatRefreshClearHistory','Очистить историю'],
@@ -273,6 +340,7 @@
     else if (!event.target.closest('.cr-header-actions')) closeHeaderMenu();
   },true);
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && isSelecting() && !document.querySelector('.modal')) { event.preventDefault(); exitSelection(); return; }
     const menu=document.getElementById('cr-chat-dropdown');
     if (!menu) {
       if (event.key==='ArrowDown' && event.target.matches('.cr-header-menu-trigger')) {event.preventDefault();openHeaderMenu();}
@@ -293,7 +361,7 @@
       document.getElementById('cr-chat-remove-confirm').onclick=()=>{
         if (scope()!==key) return;
         const d=data(); Object.assign(d,{messages:[],pins:[],draft:'',pending:[],reply:null,editing:null,editText:'',updated:true,hidden:removeChat});
-        focused=null; M.closeModal();
+        focused=null; selection=null; M.closeModal();
         if (removeChat) {const next=(M.chatContacts?.()||[]).find(M.chatIsVisible); if(next)M.state.chat=next.id;M.go('messages');}
         else redraw();
         M.toast(removeChat?'Чат удалён из списка':'История чата очищена');
@@ -313,7 +381,9 @@
     });
   }
   const openChat=M.actions.chat;
-  M.actions.chat=button=>{const d=threads[scope(button.dataset.chat)];if(d?.left){M.toast('Вы покинули эту группу. Для возвращения нужно приглашение.');return;}if(d)d.hidden=false;openChat(button);};
+  M.actions.chat=button=>{const d=threads[scope(button.dataset.chat)];if(d?.left){M.toast('Вы покинули эту группу. Для возвращения нужно приглашение.');return;}selection=null;if(d)d.hidden=false;openChat(button);};
+  const go = M.go;
+  M.go = function(id) { selection = null; return go.call(this, id); };
   Object.assign(M.actions, {
     chatRefreshHeader: openHeaderMenu,
     chatRefreshMute: () => {const d=data(); d.muted=!d.muted; redraw(); M.toast(d.muted ? 'Уведомления чата выключены' : 'Уведомления чата включены');},
@@ -321,6 +391,15 @@
     chatRefreshRemoveChat: () => confirmChatRemoval(true),
     chatRefreshLeaveGroup: confirmLeaveGroup,
     chatRefreshMenu: button => openMenu(button.dataset.id),
+    chatRefreshSelect: button => startSelection(button.dataset.id),
+    chatRefreshExitSelection: exitSelection,
+    chatRefreshSelectAll: () => {
+      if (!isSelecting()) return;
+      const available = selectableMessages();
+      selection.ids = selectedMessages().length === available.length ? [] : available.map(item => item.id);
+      redraw(); document.querySelector('.cr-select-all')?.focus({preventScroll: true});
+    },
+    chatRefreshDeleteSelected: confirmDeleteSelected,
     chatRefreshReply: button => {const d = data(); if (!message(button.dataset.id) || message(button.dataset.id).deleted) return; d.reply = button.dataset.id; d.editing = null; d.editText = ''; M.closeModal(); redraw({focus: true});},
     chatRefreshEdit: button => {const item = message(button.dataset.id); if (!item?.own || item.deleted) return; const d = data(); d.editing = item.id; d.editText = item.text; d.reply = null; M.closeModal(); redraw({focus: true});},
     chatRefreshCancel: () => {data().reply = null; data().editing = null; data().editText = ''; redraw({focus: true});},
@@ -354,7 +433,7 @@
     },
     chatRefreshRemoveFile: button => {data().pending = data().pending.filter(file => file.id !== button.dataset.id); files.delete(button.dataset.id); redraw({focus: true});},
     chatRefreshFile: button => {
-      const file = data().messages.filter(item => !item.deleted).flatMap(item => item.attachments || []).find(item => item.id === button.dataset.id); if (!file) return;
+      const file = data().messages.filter(item => !item.deleted && !item.hiddenForMe).flatMap(item => item.attachments || []).find(item => item.id === button.dataset.id); if (!file) return;
       M.modal(E(file.name), `<div class="stack"><span class="badge blue">${I('FileText')}${formatSize(file.size)}</span><p>${file.demo ? 'Материалы к дизайн-синхронизации: навигация, первый запуск и встреча на планшете.' : 'Файл прикреплён к сообщению.'}</p>${files.has(file.id) ? '<button id="cr-file-download" class="button primary">Скачать файл</button>' : '<p class="muted">Демонстрационная карточка вложения.</p>'}<button class="button secondary" data-close>Закрыть</button></div>`, () => {
         const download = document.getElementById('cr-file-download'); if (!download) return;
         download.onclick = () => {const url = URL.createObjectURL(files.get(file.id)), link = document.createElement('a'); link.href = url; link.download = file.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);};
@@ -365,7 +444,8 @@
   M.chatRefreshSnapshot = () => ({
     threads: copy(threads),
     contacts: copy((M.chatContacts?.() || []).filter(person => person.created)),
-    chat: M.state.chat
+    chat: M.state.chat,
+    selection: isSelecting() ? {key: selection.key, ids: selectedMessages().map(item => item.id)} : null
   });
   M.setChatRefreshSnapshot = snapshot => {
     if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return false;
@@ -386,6 +466,11 @@
     // Вновь созданная группа должна существовать до того, как можно будет выбрать её маршрут.
     if (typeof snapshot.chat === 'string' && M.setChatRoute?.(snapshot.chat)) changed = true;
     if (threadsChanged) threads = next;
+    const candidate = snapshot.selection;
+    const nextSelection = candidate?.key === scope() && Array.isArray(candidate.ids)
+      ? {key: candidate.key, ids: [...new Set(candidate.ids)].filter(id => next[candidate.key]?.messages.some(item => item.id === id && !item.deleted && !item.hiddenForMe))}
+      : null;
+    if (JSON.stringify(selection) !== JSON.stringify(nextSelection)) { selection = nextSelection; changed = true; }
     return changed;
   };
 })();
