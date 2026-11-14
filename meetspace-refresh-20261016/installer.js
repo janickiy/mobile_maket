@@ -4,7 +4,7 @@
   const M = window.MS;
   const { I, e, S, heading, field, progress, demo, showError } = M.onboardingUI;
   const defaults = {
-    publicIpv4: "", acmeEmail: "", certificateMode: "letsencrypt", smtpEnabled: false, smtpHost: "", smtpPort: "465",
+    publicIpv4: "", certificateMode: "letsencrypt", smtpEnabled: false, smtpHost: "", smtpPort: "465",
     smtpFrom: "", smtpUsername: "", smtpTls: "tls", resourceProfile: "standard", dockerAction: "install",
     accessAvailable: false, trustedEndpoint: "", trustStatus: "new", diagnosticScenario: "ready",
     hasJob: false, jobStatus: "running", stage: 0, detailsExpanded: false, planExpired: false,
