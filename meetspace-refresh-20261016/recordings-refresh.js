@@ -117,20 +117,17 @@
   function details(r) {
     return `<dl class="rr-details"><div><dt>Дата записи</dt><dd>${E(r.date)} · ${r.time}</dd></div><div><dt>Длительность</dt><dd>${r.processing ? 'Идёт запись' : clock(r.seconds)}</dd></div><div><dt>Размер</dt><dd>${r.size}</dd></div><div><dt>Организатор</dt><dd>${E(owner(r))}</dd></div><div><dt>Участники</dt><dd>${r.people}</dd></div><div><dt>Доступ</dt><dd>Участники встречи</dd></div></dl>`;
   }
-  function renderRecordingFiles(r, index) {
+  function renderMaterials(r, index) {
     if (r.mode === 'audio') return '';
-    if (r.mode === 'tracks') {
-      if (r.processing) return '';
-      return `<button class="rr-download-link" type="button" data-action="rrDownload" data-index="${index}" aria-haspopup="dialog">
-        ${I('Download')}Скачать запись
-      </button>`;
-    }
+    const [name, extension, icon] = r.mode === 'tracks'
+      ? ['Архив дорожек', 'ZIP', 'FolderOpen']
+      : ['Видеозапись', 'MP4', 'Video'];
     const content = r.processing
       ? '<p class="rr-muted">Материалы пока не готовы.</p>'
       : `<div class="rr-material">
-          <span class="rr-file-icon">${I('Video')}</span>
-          <div><strong>Видеозапись</strong><small>MP4 · демонстрационный файл</small></div>
-          <button class="icon-button" data-action="rrDownload" data-index="${index}" aria-label="Скачать: Видеозапись">${I('Download')}</button>
+          <span class="rr-file-icon">${I(icon)}</span>
+          <div><strong>${name}</strong><small>${extension} · демонстрационный файл</small></div>
+          <button class="icon-button" data-action="rrDownload" data-index="${index}" data-file="${extension}" aria-label="Скачать: ${name}">${I('Download')}</button>
         </div>`;
     return `<section class="rr-info-card"><h3>Материалы</h3>${content}</section>`;
   }
@@ -157,7 +154,7 @@
       stop(); const index = selected(), r = records[index];
       if (!visible(index)) return M.shell(`<section class="rr-empty">${I('CirclePlay')}<h2>Запись удалена</h2><p>Этой записи больше нет в библиотеке макета.</p><button class="button primary" data-go="recordings">Все записи</button></section>`, 'meetings', 'rr-content');
       S().position = Math.min(S().position, r.seconds);
-      return M.shell(`<section class="rr-player-page"><button class="rr-back" data-go="recordings">${I('ArrowLeft')}Все записи</button><header class="rr-player-heading"><span class="rr-eyebrow">${labels[r.mode]}</span><h2>${E(r.title)}</h2><p>${E(r.date)} · ${people(r.people)}</p></header><div class="rr-player-layout"><div class="rr-playback"><div class="rr-player-stage">${cover(r, index, true)}${r.processing ? `<div class="rr-stage-message"><strong>Встреча ещё в эфире</strong><p>Материалы появятся после завершения обработки.</p></div>` : r.mode === 'tracks' ? `<div class="rr-stage-message"><strong>Отдельная дорожка каждого участника</strong></div>` : `<button class="rr-center-play" data-action="rrPlay" aria-label="${S().playing ? 'Приостановить' : 'Начать'} демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button>`}</div>${!r.processing && r.mode !== 'tracks' ? `<div class="rr-player-controls"><button class="icon-button" data-action="rrPlay" aria-label="Начать демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button><span id="rr-time">${clock(S().position)}</span><input id="rr-seek" type="range" min="0" max="${r.seconds}" value="${S().position}" aria-label="Позиция в записи"/><span>${clock(r.seconds)}</span></div><p class="rr-demo-note">Демонстрация плеера · медиафайл не подключён</p>` : ''}${retention()}</div><aside class="rr-player-info"><section class="rr-info-card"><h3>О записи</h3>${details(r)}</section>${renderRecordingFiles(r, index)}</aside></div></section>`, 'meetings', 'rr-content');
+      return M.shell(`<section class="rr-player-page"><button class="rr-back" data-go="recordings">${I('ArrowLeft')}Все записи</button><header class="rr-player-heading"><span class="rr-eyebrow">${labels[r.mode]}</span><h2>${E(r.title)}</h2><p>${E(r.date)} · ${people(r.people)}</p></header><div class="rr-player-layout"><div class="rr-playback"><div class="rr-player-stage">${cover(r, index, true)}${r.processing ? `<div class="rr-stage-message"><strong>Встреча ещё в эфире</strong><p>Материалы появятся после завершения обработки.</p></div>` : r.mode === 'tracks' ? `<div class="rr-stage-message"><strong>Отдельная дорожка каждого участника</strong><p>Скачайте архив в разделе «Материалы».</p></div>` : `<button class="rr-center-play" data-action="rrPlay" aria-label="${S().playing ? 'Приостановить' : 'Начать'} демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button>`}</div>${!r.processing && r.mode !== 'tracks' ? `<div class="rr-player-controls"><button class="icon-button" data-action="rrPlay" aria-label="Начать демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button><span id="rr-time">${clock(S().position)}</span><input id="rr-seek" type="range" min="0" max="${r.seconds}" value="${S().position}" aria-label="Позиция в записи"/><span>${clock(r.seconds)}</span></div><p class="rr-demo-note">Демонстрация плеера · медиафайл не подключён</p>` : ''}${retention()}</div><aside class="rr-player-info"><section class="rr-info-card"><h3>О записи</h3>${details(r)}</section>${renderMaterials(r, index)}</aside></div></section>`, 'meetings', 'rr-content');
     },
     bind() {
       const seek = document.getElementById('rr-seek');
@@ -190,7 +187,7 @@
     },
     rrDownload(button) {
       const index = recordIndex(button); if (!visible(index) || records[index].processing) return;
-      M.modal('Скачать запись', `<div class="stack"><p>В приложении здесь скачивается ${records[index].mode === 'tracks' ? 'архив дорожек' : 'медиафайл записи'}. В макете файл не подключён.</p><p class="rr-muted">Можно скачать сведения о демонстрационной записи в текстовом файле.</p><button class="button primary" data-action="rrDownloadInfo" data-index="${index}">${I('Download')}Скачать сведения · TXT</button><button class="button secondary" data-close>Закрыть</button></div>`);
+      M.modal('Скачать материалы', `<div class="stack"><p>В приложении здесь скачивается ${button.dataset.file === 'ZIP' || records[index].mode === 'tracks' ? 'архив дорожек' : 'медиафайл записи'}. В макете файл не подключён.</p><p class="rr-muted">Можно скачать сведения о демонстрационной записи в текстовом файле.</p><button class="button primary" data-action="rrDownloadInfo" data-index="${index}">${I('Download')}Скачать сведения · TXT</button><button class="button secondary" data-close>Закрыть</button></div>`);
     },
     rrDownloadInfo(button) {
       const index = recordIndex(button); if (!visible(index)) return;

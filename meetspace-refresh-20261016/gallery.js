@@ -179,7 +179,7 @@
 
   function previewURL() {
     const query = new URLSearchParams({
-      rev: "20261120-track-download",
+      rev: "20261120-track-materials-restored",
       screen: current.id,
       theme,
       chat,
