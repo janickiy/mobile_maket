@@ -5,8 +5,8 @@
     ['composite','Video','Общая запись','Видео участников, звук и демонстрация экрана'],
     ['audio','AudioLines','Только аудио','Разговор без видеодорожки'],
     ['tracks','Users','Отдельные дорожки','Дорожки участников и общий микс'],
-    ['screen','MonitorUp','Фокус на экране','Демонстрация экрана и звук встречи'],
   ];
+  const recordingMode = id => modes.find(([mode]) => mode === id) ?? modes[0];
   const isOwner = () => !M.state.guestMode && (!M.state.meetingMeta || M.state.meetingMeta.mine === true);
   const accountId=()=>M.accountManagerSnapshot?.().activeId;
   const mayStop=()=>!M.state.guestMode && (isOwner() || room().requestedBy===accountId());
@@ -26,13 +26,15 @@
   M.actions.manageRecording = () => {
     if(M.state.guestMode){M.modal('Запись встречи', `<div class="stack"><p>Гости не могут запускать запись. Попросите участника встречи с аккаунтом начать запись.</p><button class="button secondary" data-close>Понятно</button></div>`);return;}
     const s = room();
-    M.modal('Запись встречи', `<div class="stack"><div class="wr-state"><span class="wr-symbol">${I('Video')}</span><div><h3>${labels[s.recording]}</h3><p>${E(M.state.meetingTitle || 'Дизайн-синхронизация')}</p></div></div>${['idle','ready'].includes(s.recording) ? `${s.recording === 'ready' && Number.isInteger(s.recordIndex) && s.recordIndex >= 0 ? `<button class="button secondary" data-action="record" data-index="${s.recordIndex}">${I('CirclePlay')}Открыть запись</button>` : ''}<fieldset class="wr-modes"><legend>Формат записи</legend>${modes.map(([id,icon,title,hint])=>`<label class="wr-mode"><input type="radio" name="record-mode" value="${id}" ${s.mode === id ? 'checked':''}/><span>${I(icon)}</span><div><strong>${title}</strong><small>${hint}</small></div></label>`).join('')}</fieldset><button class="button primary" data-action="wrStartRecording">${I('Circle')}Начать запись</button>` : s.recording === 'recording' ? `<div class="wr-notice">${I('CircleDot')}Записывается: ${modes.find(x=>x[0] === s.mode)[2]}</div><button class="button danger" data-action="wrStopRecording">${I('Square')}Остановить запись</button>` : `<div class="wr-notice" role="status">${I('Clock')}${s.recording === 'processing' ? 'Готовим файлы. После обработки они появятся в записях встречи.' : 'Подготавливаем запись. Это займёт несколько секунд.'}</div>`}<p class="wr-hint">Записи хранятся 7 дней. Остановить запись может её инициатор или организатор встречи.</p><small class="wr-hint">Демонстрация интерфейса · камера и микрофон не записываются.</small></div>`);
+    const [modeId, , modeTitle] = recordingMode(s.mode);
+    M.modal('Запись встречи', `<div class="stack"><div class="wr-state"><span class="wr-symbol">${I('Video')}</span><div><h3>${labels[s.recording]}</h3><p>${E(M.state.meetingTitle || 'Дизайн-синхронизация')}</p></div></div>${['idle','ready'].includes(s.recording) ? `${s.recording === 'ready' && Number.isInteger(s.recordIndex) && s.recordIndex >= 0 ? `<button class="button secondary" data-action="record" data-index="${s.recordIndex}">${I('CirclePlay')}Открыть запись</button>` : ''}<fieldset class="wr-modes"><legend>Формат записи</legend>${modes.map(([id,icon,title,hint])=>`<label class="wr-mode"><input type="radio" name="record-mode" value="${id}" ${modeId === id ? 'checked':''}/><span>${I(icon)}</span><div><strong>${title}</strong><small>${hint}</small></div></label>`).join('')}</fieldset><button class="button primary" data-action="wrStartRecording">${I('Circle')}Начать запись</button>` : s.recording === 'recording' ? `<div class="wr-notice">${I('CircleDot')}Записывается: ${modeTitle}</div><button class="button danger" data-action="wrStopRecording">${I('Square')}Остановить запись</button>` : `<div class="wr-notice" role="status">${I('Clock')}${s.recording === 'processing' ? 'Готовим файлы. После обработки они появятся в записях встречи.' : 'Подготавливаем запись. Это займёт несколько секунд.'}</div>`}<p class="wr-hint">Записи хранятся 7 дней. Остановить запись может её инициатор или организатор встречи.</p><small class="wr-hint">Демонстрация интерфейса · камера и микрофон не записываются.</small></div>`);
   };
   M.actions.wrStartRecording = () => {
     const s=room(); if (M.state.guestMode || !['idle','ready'].includes(s.recording)) return;
     s.requestedBy=accountId();
     s.recordToken=crypto.randomUUID();
-    s.mode=document.querySelector('[name="record-mode"]:checked')?.value || s.mode;
+    const selectedMode = document.querySelector('[name="record-mode"]:checked')?.value;
+    s.mode = recordingMode(selectedMode ?? s.mode)[0];
     s.recording='starting'; M.closeModal(); M.render();
     const roomKey=key(),recordToken=s.recordToken;
     setTimeout(()=>{const current=M.state.roomRefresh?.[roomKey];if(!current||current.recording!=='starting'||current.recordToken!==recordToken)return;current.recording='recording';M.render();M.toast('Демо: запись начата. Участники увидят индикатор.');},900);
