@@ -3,20 +3,22 @@
   flex-direction: column;
   max-width: 560px;
   padding: 0;
+  border: 0;
   overflow: hidden;
 }
 
 .modal.ci-modal > .modal-head {
   flex: none;
-  min-height: 64px;
+  min-height: 56px;
   margin: 0;
-  padding: 8px 16px 8px 24px;
-  border-bottom: 1px solid var(--line);
+  padding: 8px 16px 4px 24px;
 }
 
 .ci-modal .modal-head h2 {
   margin: 0;
-  font-size: 17px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1.3;
 }
 
@@ -30,13 +32,12 @@
 .ci-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   min-height: 0;
-  padding: 20px 24px 24px;
+  padding: 0 24px 24px;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  background: var(--bg);
 }
 
 .ci-content > * {
@@ -46,12 +47,11 @@
 
 .ci-identity {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--surface);
+  gap: 10px;
+  padding: 2px 0 0;
+  text-align: center;
 }
 
 .ci-identity > :not(.ci-avatar) {
@@ -64,10 +64,10 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
-  font-size: 20px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  font-size: 24px;
 }
 
 .ci-avatar > img {
@@ -80,7 +80,7 @@
 .ci-name {
   margin: 0;
   color: var(--ink);
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -.025em;
   line-height: 1.2;
@@ -95,8 +95,8 @@
 }
 
 .ci-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(135px, 100%), 1fr));
+  display: flex;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -106,11 +106,10 @@
   justify-content: center;
   gap: 7px;
   min-width: 0;
-  min-height: 46px;
-  padding: 8px 9px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
+  min-height: 44px;
+  padding: 8px 18px;
+  border-radius: 14px;
+  background: var(--accent-soft);
   color: var(--accent);
   font-size: 13px;
   font-weight: 650;
@@ -120,7 +119,7 @@
 }
 
 .ci-action:hover {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
 }
 
 .ci-action svg,
@@ -132,28 +131,23 @@
 }
 
 .ci-details,
-.ci-members,
-.ci-shared {
+.ci-members {
   margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface);
+  border-radius: 16px;
+  background: var(--bg);
 }
 
 .ci-details {
-  padding: 0 16px;
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
 }
 
 .ci-details > div {
   display: grid;
-  grid-template-columns: minmax(5rem, 26%) minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(5rem, 22%) minmax(0, 1fr);
+  gap: 16px;
   align-items: baseline;
-  padding: 11px 0;
-}
-
-.ci-details > div + div {
-  border-top: 1px solid var(--line);
 }
 
 .ci-details dt {
@@ -165,6 +159,7 @@
   margin: 0;
   color: var(--ink);
   font-size: 14px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
@@ -178,7 +173,7 @@
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  padding: 8px 16px;
+  padding: 8px 20px;
   list-style: none;
   color: var(--ink);
   font-size: 13px;
@@ -209,7 +204,7 @@
 .ci-member-list {
   display: grid;
   margin: 0;
-  padding: 0 16px 6px;
+  padding: 0 20px 8px;
   list-style: none;
 }
 
@@ -219,7 +214,6 @@
   gap: 8px;
   min-width: 0;
   padding: 8px 0;
-  border-top: 1px solid var(--line);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
@@ -239,16 +233,18 @@
 .ci-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  width: min(100%, 332px);
+  margin: 0 auto;
   padding: 4px;
-  border-bottom: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface2);
 }
 
 .ci-tabs > button {
   min-width: 0;
   min-height: 44px;
   padding: 6px 4px;
-  border-radius: 9px;
+  border-radius: 20px;
   background: transparent;
   color: var(--muted);
   font-size: 13px;
@@ -257,8 +253,9 @@
 }
 
 .ci-tabs > button[aria-selected="true"] {
-  background: var(--accent-soft);
+  background: var(--surface);
   color: var(--accent);
+  box-shadow: 0 1px 4px #17182115;
 }
 
 .ci-tabs > button:hover:not([aria-selected="true"]) {
@@ -268,7 +265,8 @@
 
 .ci-panel {
   min-width: 0;
-  padding: 8px;
+  margin-top: 12px;
+  border-radius: 12px;
 }
 
 .ci-panel[hidden] { display: none; }
@@ -394,14 +392,17 @@
   justify-items: center;
   align-content: center;
   gap: 8px;
-  min-height: 124px;
+  min-height: 100px;
   padding: 14px;
   text-align: center;
 }
 
 .ci-empty svg {
-  width: 26px;
-  height: 26px;
+  width: 42px;
+  height: 42px;
+  padding: 10px;
+  border-radius: 50%;
+  background: var(--bg);
   color: var(--muted);
 }
 
@@ -417,13 +418,14 @@
 }
 
 @media (max-width: 600px) {
-  .modal.ci-modal > .modal-head { min-height: 56px; padding: 5px 8px 5px 16px; }
-  .ci-content { gap: 12px; padding: 14px 14px 18px; }
-  .ci-identity { gap: 12px; padding: 12px; }
+  .modal.ci-modal > .modal-head { min-height: 52px; padding: 4px 8px 4px 16px; }
+  .ci-content { gap: 16px; padding: 0 16px 18px; }
   .ci-avatar,
-  .ci-avatar .avatar { width: 54px; height: 54px; border-radius: 16px; font-size: 18px; }
-  .ci-name { font-size: 20px; }
-  .ci-details { padding: 0 12px; }
-  .ci-details > div { grid-template-columns: minmax(4rem, 27%) minmax(0, 1fr); gap: 8px; padding: 10px 0; }
-  .ci-actions { grid-template-columns: repeat(auto-fit, minmax(min(125px, 100%), 1fr)); }
+  .ci-avatar .avatar { width: 60px; height: 60px; font-size: 20px; }
+  .ci-name { font-size: 21px; }
+  .ci-action { flex: 1; padding-inline: 8px; }
+  .ci-action:only-child { flex: 0 1 auto; padding-inline: 18px; }
+  .ci-details { padding: 15px; }
+  .ci-details > div { grid-template-columns: minmax(4rem, 25%) minmax(0, 1fr); gap: 8px; }
+  .ci-members summary, .ci-member-list { padding-inline: 15px; }
 }

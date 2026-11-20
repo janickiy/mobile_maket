@@ -179,7 +179,7 @@
 
   function previewURL() {
     const query = new URLSearchParams({
-      rev: "20261120-chat-info",
+      rev: "20261120-profile-spacing",
       screen: current.id,
       theme,
       chat,
