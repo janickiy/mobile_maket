@@ -84,6 +84,7 @@
       owner: "anna",
       initials: "П",
       name: "Команда продукта",
+      description: "Обсуждаем планы команды, макеты и материалы к встречам.",
       preview: "Мария: собрала всё в одном файле",
       time: "09:38",
       tone: "",
@@ -94,6 +95,8 @@
       kind: "direct",
       initials: "АК",
       name: "Анна Кузнецова",
+      bio: "Занимаюсь дизайном продукта и исследованиями интерфейсов.",
+      email: "anna@example.org",
       preview: "Да, до встречи!",
       time: "09:24",
       tone: "orange",
@@ -106,6 +109,7 @@
       owner: "max",
       initials: "Р",
       name: "Разработка",
+      description: "Согласуем задачи разработки и делимся обновлениями проекта.",
       preview: "Дмитрий: обновление готово",
       time: "Вчера",
       tone: "blue",
@@ -116,6 +120,8 @@
       kind: "direct",
       initials: "МП",
       name: "Максим Петров",
+      bio: "Разрабатываю MeetSpace и поддерживаю интеграции команды.",
+      email: "max@example.org",
       preview: "Вы: Спасибо, посмотрю сегодня",
       time: "Вчера",
       tone: "mint",
@@ -128,6 +134,7 @@
       owner: "self",
       initials: "Д",
       name: "Дизайн-команда",
+      description: "Обсуждаем дизайн MeetSpace и делимся макетами для ревью.",
       preview: "Анна: новая версия макетов в папке",
       time: "Пт",
       tone: "",
@@ -718,23 +725,6 @@
     chat: (b) => {
       M.state.chat = b.dataset.chat;
       M.go("thread");
-    },
-    chatInfo: () => {
-      const c = M.chatContact(M.state.chat) || contacts[0];
-      const isGroup = c.kind === "group";
-      M.modal(
-        isGroup ? "О группе" : "О контакте",
-        `<div class="stack"><div class="group-info-heading">${chatAvatar(c)}<div><h3>${E(c.name)}</h3><p>${isGroup ? `Группа · ${participantCount(c.members.length)}` : "Личная переписка"}</p></div></div>${
-          isGroup
-            ? `${M.renderGroupEditEntry?.(c) || ""}${c.description ? `<p class="ge-description">${E(c.description)}</p>` : ""}${M.renderGroupAvatarEditor?.(c) || ""}<h3 class="group-members-title">Участники</h3><div class="group-info-members">${c.members
-                .map((id) => {
-                  const person = member(id);
-                  return `<div class="group-info-member">${avatar(id === "self" ? M.profileAvatarMarkup?.(M.profileInitials?.() || person.initials) || E(person.initials) : E(person.initials), person.tone)}<div><strong>${E(person.name)}</strong><small>${id === "self" ? "Вы" : ""}${id === c.owner ? `${id === "self" ? " · " : ""}Администратор` : ""}</small></div></div>`;
-                })
-                .join("")}</div>`
-            : ""
-        }</div>`,
-      );
     },
     newChat: () =>
       M.modal(

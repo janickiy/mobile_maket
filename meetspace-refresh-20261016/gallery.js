@@ -179,7 +179,7 @@
 
   function previewURL() {
     const query = new URLSearchParams({
-      rev: "20261120-call-recording-modes",
+      rev: "20261120-chat-info",
       screen: current.id,
       theme,
       chat,

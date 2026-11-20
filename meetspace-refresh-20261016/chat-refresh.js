@@ -117,6 +117,138 @@
     const label = download.preview ? 'Скачать фото (превью)' : 'Скачать фото';
     return `<a class="${compact ? 'cr-photo-download' : 'cr-photo-download-link'}" href="${E(download.href)}" download="${E(download.name)}" aria-label="${E(label)} ${E(file.name)}" title="${E(label)}">${I('Download')}${compact ? '' : `<span>${label}</span>`}</a>`;
   }
+
+  const infoTabs = [
+    {id: 'media', label: 'Медиа', icon: 'Image', empty: 'В этом чате пока нет медиа.'},
+    {id: 'files', label: 'Файлы', icon: 'FileText', empty: 'В этом чате пока нет файлов.'},
+    {id: 'links', label: 'Ссылки', icon: 'Link', empty: 'В этом чате пока нет ссылок.'},
+  ];
+  const isMedia = file => Boolean(photoSource(file)) || /^(image|video)\//i.test(file.type || '');
+
+  function sharedItems() {
+    const attachments = new Map(), links = new Map();
+    for (const item of selectableMessages().slice().reverse()) {
+      for (const file of item.attachments || []) {
+        if (file?.id && !attachments.has(file.id)) attachments.set(file.id, file);
+      }
+      for (const match of item.text.matchAll(/https?:\/\/[^\s<>"']+/gi)) {
+        let candidate = match[0].replace(/[.,!?;:]+$/, '');
+        for (const [open, close] of [['(', ')'], ['[', ']'], ['{', '}']]) {
+          const extra = candidate.split(close).length - candidate.split(open).length;
+          for (let i = 0; i < extra && candidate.endsWith(close); i++) candidate = candidate.slice(0, -1);
+        }
+        let url;
+        try {
+          url = new URL(candidate);
+        } catch { continue; }
+        if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) continue;
+        links.set(url.href, url);
+      }
+    }
+    return {
+      media: [...attachments.values()].filter(isMedia),
+      files: [...attachments.values()].filter(file => !isMedia(file)),
+      links: [...links.values()],
+    };
+  }
+
+  function renderSharedItems(tab, items) {
+    if (!items.length) return `<div class="ci-empty">${I(tab.icon)}<p>${tab.empty}</p></div>`;
+    if (tab.id === 'media') return `<div class="ci-media-grid">${items.map(file => {
+      const source = photoSource(file);
+      return `<button type="button" class="ci-media-item" data-action="chatRefreshFile" data-id="${E(file.id)}" aria-label="Открыть ${E(file.name)}">
+        ${source ? `<img src="${E(source)}" alt="" decoding="async"/>` : `${I(/^video\//i.test(file.type || '') ? 'Video' : 'Image')}<span>${E(file.name)}</span>`}
+      </button>`;
+    }).join('')}</div>`;
+    return `<div class="ci-list">${items.map(item => tab.id === 'links'
+      ? `<a class="ci-item" href="${E(item.href)}" target="_blank" rel="noopener noreferrer">
+        <span class="ci-item-icon">${I('Link')}</span>
+        <span class="ci-item-copy"><strong>${E(item.hostname)}</strong><small>${E(item.href)}</small></span>
+        <span class="ci-item-action">${I('ArrowUpRight')}</span>
+      </a>`
+      : `<button type="button" class="ci-item" data-action="chatRefreshFile" data-id="${E(item.id)}">
+        <span class="ci-item-icon">${I('FileText')}</span>
+        <span class="ci-item-copy"><strong>${E(item.name)}</strong><small>${formatSize(item.size)}</small></span>
+        <span class="ci-item-action">${I('ChevronRight')}</span>
+      </button>`).join('')}</div>`;
+  }
+
+  function infoMembers(c) {
+    const members = M.chatMemberDirectory();
+    return `<details class="ci-members">
+      <summary tabindex="0">${I('Users')}<span>Участники</span><small>${c.members.length}</small></summary>
+      <ul class="ci-member-list">${c.members.map(id => {
+        const person = members.find(member => member.id === id);
+        if (!person) return '';
+        const self = id === 'self';
+        const role = [self ? 'Вы' : '', id === c.owner ? 'Администратор' : ''].filter(Boolean).join(' · ');
+        return `<li class="ci-member">${avatar(person.initials, person.tone, self ? M.profileAvatarMarkup?.(M.profileInitials?.() || person.initials) : '')}
+          <span><strong>${E(person.name)}</strong>${role ? `<small>${role}</small>` : ''}</span>
+        </li>`;
+      }).join('')}</ul>
+    </details>`;
+  }
+
+  function openChatInfo(initialTab = 'media') {
+    const c = contact();
+    if (!c || !M.chatIsVisible(c)) return;
+    const group = c.kind === 'group';
+    const shared = sharedItems();
+    const info = group
+      ? [['Название', c.name], ['Описание', c.description || 'Описание не добавлено']]
+      : [['Имя', c.name], ['О себе', c.bio || 'Не указано'], ['Email', c.email || 'Не указан']];
+
+    M.modal(group ? 'О группе' : 'О контакте', `
+      <div class="ci-content">
+        <div class="ci-identity">
+          <span class="ci-avatar avatar ${E(c.tone || '')}" aria-hidden="true">${M.chatAvatarMarkup?.(c) || E(c.initials)}</span>
+          <div>
+            <h3 class="ci-name">${E(c.name)}</h3>
+            <p class="ci-status">${group ? memberCount(c.members.length) : 'В сети'}</p>
+          </div>
+        </div>
+        <div class="ci-actions">
+          <button type="button" class="ci-action" data-action="chatInfoMessage">${I('MessageCircle')}<span>${group ? 'Перейти в чат' : 'Сообщение'}</span></button>
+          ${group ? M.canEditGroup?.(c)
+            ? `<button type="button" class="ci-action" data-action="groupEdit" data-id="${E(c.id)}">${I('Pencil')}<span>Редактировать группу</span></button>`
+            : ''
+          : `<button type="button" class="ci-action" data-action="startPersonalCall" data-contact="${E(c.id)}">${I('Phone')}<span>Позвонить</span></button>`}
+        </div>
+        <dl class="ci-details">${info.map(([label, value]) => `<div><dt>${label}</dt><dd>${E(value)}</dd></div>`).join('')}</dl>
+        ${group ? infoMembers(c) : ''}
+        <section class="ci-shared" aria-label="Содержимое переписки">
+          <div class="ci-tabs" role="tablist" aria-label="Вложения и ссылки">
+            ${infoTabs.map(tab => `<button type="button" id="ci-tab-${tab.id}" role="tab" aria-controls="ci-panel" data-tab="${tab.id}">${tab.label}</button>`).join('')}
+          </div>
+          <div class="ci-panel" id="ci-panel" role="tabpanel" tabindex="0"></div>
+        </section>
+      </div>`, () => {
+      const modal = document.querySelector('.modal');
+      modal.classList.add('ci-modal');
+      const tabs = [...modal.querySelectorAll('[role="tab"]')];
+      const panel = modal.querySelector('.ci-panel');
+      const select = (button, focus = false) => {
+        for (const tab of tabs) {
+          tab.setAttribute('aria-selected', String(tab === button));
+          tab.tabIndex = tab === button ? 0 : -1;
+        }
+        const tab = infoTabs.find(item => item.id === button.dataset.tab);
+        panel.setAttribute('aria-labelledby', button.id);
+        panel.innerHTML = renderSharedItems(tab, shared[tab.id]);
+        if (focus) button.focus();
+      };
+      tabs.forEach((button, index) => {
+        button.addEventListener('click', () => select(button));
+        button.addEventListener('keydown', event => {
+          const positions = {ArrowLeft: (index + tabs.length - 1) % tabs.length, ArrowRight: (index + 1) % tabs.length, Home: 0, End: tabs.length - 1};
+          if (!Object.hasOwn(positions, event.key)) return;
+          event.preventDefault();
+          select(tabs[positions[event.key]], true);
+        });
+      });
+      select(tabs.find(button => button.dataset.tab === initialTab) || tabs[0]);
+    });
+  }
   function attachments(list = [], pending = false) {
     const photos = list.filter(file => photoSource(file)), documents = list.filter(file => !photoSource(file));
     const grid = photos.length ? `<div class="cr-photo-grid ${photos.length === 1 ? 'cr-photo-single' : ''} ${photos.length === 3 ? 'cr-photo-triple' : ''} ${pending ? 'cr-photo-pending' : ''}" role="group" aria-label="Фото: ${photos.length}">${photos.map(file => `<div class="cr-photo-tile"><button type="button" class="cr-photo-open" data-action="chatRefreshFile" data-id="${E(file.id)}" aria-label="Открыть фото ${E(file.name)}"><img src="${E(photoSource(file))}" alt="${E(file.name)}" decoding="async"/></button>${pending ? `<button type="button" class="cr-photo-remove" data-action="chatRefreshRemoveFile" data-id="${E(file.id)}" aria-label="Убрать ${E(file.name)}">${I('X')}</button>` : photoDownloadLink(file, true)}</div>`).join('')}</div>` : '';
@@ -408,6 +540,12 @@
   const go = M.go;
   M.go = function(id) { selection = null; return go.call(this, id); };
   Object.assign(M.actions, {
+    chatInfo: () => openChatInfo(),
+    chatInfoMessage: () => {
+      if (M.state.screen !== 'thread' && !document.getElementById('message-input')) M.go('thread');
+      else M.closeModal();
+      document.getElementById('message-input')?.focus();
+    },
     chatRefreshHeader: openHeaderMenu,
     chatRefreshMute: () => {const d=data(); d.muted=!d.muted; redraw(); M.toast(d.muted ? 'Уведомления чата выключены' : 'Уведомления чата включены');},
     chatRefreshClearHistory: () => confirmChatRemoval(false),
@@ -483,14 +621,29 @@
       const d = data();
       const file = [...d.pending, ...d.messages.filter(item => !item.deleted && !item.hiddenForMe).flatMap(item => item.attachments || [])].find(item => item.id === button.dataset.id); if (!file) return;
       const source = photoSource(file);
+      const infoTab = button.closest('.ci-modal')?.querySelector('[role="tab"][aria-selected="true"]')?.dataset.tab;
+      const infoScope = scope(), infoOpener = M.opener;
+      const back = infoTab ? `<button type="button" class="button secondary" id="ci-back-to-info">${I('ArrowLeft')}К информации</button>` : '';
+      const bindBack = () => {
+        const backButton = document.getElementById('ci-back-to-info');
+        if (!backButton) return;
+        backButton.onclick = () => {
+          if (scope() !== infoScope) { M.closeModal(); return; }
+          openChatInfo(infoTab);
+          M.opener = infoOpener;
+          document.querySelector(`.ci-modal .ci-panel [data-id="${CSS.escape(file.id)}"]`)?.focus();
+        };
+      };
       if (source) {
-        M.modal(E(file.name), `<div class="cr-photo-viewer"><img src="${E(source)}" alt="${E(file.name)}"/><span>${E(file.name)} · ${formatSize(file.size)}</span>${photoDownloadLink(file)}</div>`, () => {
+        M.modal(E(file.name), `<div class="cr-photo-viewer"><img src="${E(source)}" alt="${E(file.name)}"/><span>${E(file.name)} · ${formatSize(file.size)}</span>${photoDownloadLink(file)}${back}</div>`, () => {
           document.querySelector('.modal').classList.add('cr-photo-modal');
+          bindBack();
         });
         return;
       }
-      M.modal(E(file.name), `<div class="stack"><span class="badge blue">${I('FileText')}${formatSize(file.size)}</span><p>${file.demo ? 'Материалы к дизайн-синхронизации: навигация, первый запуск и встреча на планшете.' : 'Файл прикреплён к сообщению.'}</p>${files.has(file.id) ? '<button id="cr-file-download" class="button primary">Скачать файл</button>' : '<p class="muted">Демонстрационная карточка вложения.</p>'}<button class="button secondary" data-close>Закрыть</button></div>`, () => {
+      M.modal(E(file.name), `<div class="stack"><span class="badge blue">${I('FileText')}${formatSize(file.size)}</span><p>${file.demo ? 'Материалы к дизайн-синхронизации: навигация, первый запуск и встреча на планшете.' : 'Файл прикреплён к сообщению.'}</p>${files.has(file.id) ? '<button id="cr-file-download" class="button primary">Скачать файл</button>' : '<p class="muted">Демонстрационная карточка вложения.</p>'}${back || '<button class="button secondary" data-close>Закрыть</button>'}</div>`, () => {
         bindDownload(file);
+        bindBack();
       });
     }
   });

@@ -126,9 +126,9 @@ window.MS = {
       if (e.key === "Tab") {
         const all = [
           ...modal.querySelectorAll(
-            "button:not(:disabled),input:not(:disabled),select,textarea,a[href]",
+            "button,input,select,textarea,a[href],summary,[tabindex]",
           ),
-        ].filter((el) => el.offsetParent !== null);
+        ].filter((el) => el.offsetParent !== null && el.tabIndex >= 0 && !el.matches(":disabled"));
         const first = all[0],
           last = all.at(-1);
         if (e.shiftKey && document.activeElement === first) {
