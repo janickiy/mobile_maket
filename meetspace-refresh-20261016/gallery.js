@@ -176,7 +176,20 @@
   let portrait = params.get("orientation") === "portrait";
   const $ = (id) => document.getElementById(id);
   const frames = [$("phone-preview"), $("tablet-preview")];
-  const initialPreview = `preview.html?rev=20261114-installer-parity&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
+
+  function previewURL() {
+    const query = new URLSearchParams({
+      rev: "20261120-recording-header",
+      screen: current.id,
+      theme,
+      chat,
+    });
+    if (current.id === "recording") query.set("record", currentRecord);
+    if (current.id === "settings" && section) query.set("section", section);
+    return `preview.html?${query}`;
+  }
+
+  const initialPreview = previewURL();
   frames.forEach((frame) => {
     if (frame.getAttribute("src") !== initialPreview)
       frame.src = initialPreview;
@@ -207,7 +220,7 @@
     if (current.id === "settings" && section) url.searchParams.set("section", section);
     else url.searchParams.delete("section");
     history.replaceState(null, "", url);
-    $("open-screen").href = `preview.html?rev=20261114-installer-parity&screen=${current.id}&theme=${theme}&chat=${encodeURIComponent(chat)}${current.id === "recording" ? `&record=${currentRecord}` : ""}${current.id === "settings" && section ? `&section=${section}` : ""}`;
+    $("open-screen").href = previewURL();
   }
   function notifyFrames(except) {
     frames.forEach((frame) => {
