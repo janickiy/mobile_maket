@@ -7,12 +7,11 @@
     {id:'invitation', title:'Приглашение на встречу', body:'Анна Кузнецова пригласила вас на дизайн-синхронизацию.', time:'25 минут назад', category:'Приглашение', icon:'UserPlus', group:'Недавно', meeting:'design'},
     {id:'recording', title:'Запись встречи готова', body:'Продукт. Следующая глава — видео и материалы уже доступны.', time:'1 час назад', category:'Запись', icon:'CirclePlay', group:'Недавно', record:0},
     {id:'mention', title:'Вас упомянули в группе', body:'Мария Полякова · Команда продукта', time:'Ранее', category:'Сообщение', icon:'MessagesSquare', group:'Ранее', chat:'team'},
-    {id:'summary', title:'Итоги встречи готовы', body:'Продукт. Следующая глава — решения и задачи по итогам встречи.', time:'Ранее', category:'Итоги встречи', icon:'FileText', group:'Ранее', record:0, summary:true},
   ];
   const ids = new Set(events.map(event => event.id));
   let stores = {}, filter = 'all';
   const account = () => M.accountManagerSnapshot?.().activeId || 'personal';
-  const state = () => stores[account()] ||= {read:['mention','summary']};
+  const state = () => stores[account()] ||= {read:['mention']};
   const unread = event => !state().read.includes(event.id);
   const count = () => events.filter(unread).length;
   const countLabel = n => `${n} ${n===1?'непрочитанное':'непрочитанных'}`;
@@ -69,7 +68,7 @@
       M.refreshNotifications();M.productStateChanged?.();M.closeModal();
       if(event.meeting){M.go('meetings');M.actions.meetingDetails({dataset:{id:event.meeting}});}
       else if(event.chat)M.actions.chat({dataset:{chat:event.chat}});
-      else if(event.record!==undefined){M.actions.record({dataset:{index:String(event.record)}});if(event.summary)M.actions.rrMaterialTab({dataset:{value:'summary'}});}
+      else if(event.record!==undefined)M.actions.record({dataset:{index:String(event.record)}});
     },
     ntSettings:()=>{M.closeModal();M.actions.accountSection({dataset:{section:'notifications'}});},
   });
@@ -78,8 +77,10 @@
     if(!value?.stores||typeof value.stores!=='object'||Array.isArray(value.stores))return false;
     const next={};
     for(const [key,item]of Object.entries(value.stores)){
-      if(!item||!Array.isArray(item.read)||item.read.some(id=>!ids.has(id)))return false;
-      Object.defineProperty(next,key,{value:{read:[...new Set(item.read)]},enumerable:true,writable:true,configurable:true});
+      if(!item||!Array.isArray(item.read))return false;
+      const read=item.read.filter(id=>id!=='summary');
+      if(read.some(id=>!ids.has(id)))return false;
+      Object.defineProperty(next,key,{value:{read:[...new Set(read)]},enumerable:true,writable:true,configurable:true});
     }
     if(JSON.stringify(stores)===JSON.stringify(next))return false;stores=next;return true;
   };

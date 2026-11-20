@@ -29,7 +29,7 @@
   const labels = { video: 'Видеозапись', audio: 'Аудиозапись', tracks: 'Дорожки участников' };
   const icons = { video: 'Video', audio: 'Mic', tracks: 'Users' };
   const initial = Number(new URLSearchParams(location.search).get('record'));
-  M.state.recordLibrary = { query: '', meeting: 'all', status: 'past', period: 'all', sort: 'newest', view: 'list', deleted: [], position: 0, playing: false, materialTab: 'transcript' };
+  M.state.recordLibrary = { query: '', meeting: 'all', status: 'past', period: 'all', sort: 'newest', view: 'list', deleted: [], position: 0, playing: false };
   if (Number.isInteger(initial) && initial >= 0 && initial < records.length) M.state.record = initial;
   const S = () => M.state.recordLibrary;
   const selected = () => Number.isInteger(M.state.record) && records[M.state.record] ? M.state.record : 0;
@@ -67,7 +67,7 @@
       if (recordsChanged) records.splice(seedCount, records.length - seedCount, ...additions);
     }
     const next = { ...S() };
-    for (const [key, options] of Object.entries({ status: ['past', 'live'], period: ['all', '7', '30', '90'], sort: ['newest', 'oldest'], view: ['list', 'grid'], materialTab: ['transcript', 'summary'] })) {
+    for (const [key, options] of Object.entries({ status: ['past', 'live'], period: ['all', '7', '30', '90'], sort: ['newest', 'oldest'], view: ['list', 'grid'] })) {
       if (options.includes(value[key])) next[key] = value[key];
     }
     if (typeof value.query === 'string') next.query = value.query.slice(0, 150);
@@ -117,7 +117,20 @@
   function details(r) {
     return `<dl class="rr-details"><div><dt>Дата записи</dt><dd>${E(r.date)} · ${r.time}</dd></div><div><dt>Длительность</dt><dd>${r.processing ? 'Идёт запись' : clock(r.seconds)}</dd></div><div><dt>Размер</dt><dd>${r.size}</dd></div><div><dt>Организатор</dt><dd>${E(owner(r))}</dd></div><div><dt>Участники</dt><dd>${r.people}</dd></div><div><dt>Доступ</dt><dd>Участники встречи</dd></div></dl>`;
   }
-  const materials = r => r.processing ? [] : r.mode === 'audio' ? [['Аудиозапись', 'M4A', 'Mic']] : r.mode === 'tracks' ? [['Архив дорожек', 'ZIP', 'FolderOpen']] : [['Видеозапись', 'MP4', 'Video'], ['Аудиозапись', 'M4A', 'Mic']];
+  function renderMaterials(r, index) {
+    if (r.mode === 'audio') return '';
+    const [name, extension, icon] = r.mode === 'tracks'
+      ? ['Архив дорожек', 'ZIP', 'FolderOpen']
+      : ['Видеозапись', 'MP4', 'Video'];
+    const content = r.processing
+      ? '<p class="rr-muted">Материалы пока не готовы.</p>'
+      : `<div class="rr-material">
+          <span class="rr-file-icon">${I(icon)}</span>
+          <div><strong>${name}</strong><small>${extension} · демонстрационный файл</small></div>
+          <button class="icon-button" data-action="rrDownload" data-index="${index}" data-file="${extension}" aria-label="Скачать: ${name}">${I('Download')}</button>
+        </div>`;
+    return `<section class="rr-info-card"><h3>Материалы</h3>${content}</section>`;
+  }
   function playerButtons() {
     const playing = S().playing;
     document.querySelectorAll('[data-action="rrPlay"]').forEach(button => { button.innerHTML = I(playing ? 'Pause' : 'Play'); button.setAttribute('aria-label', playing ? 'Приостановить демо воспроизведения' : 'Начать демо воспроизведения'); });
@@ -135,25 +148,13 @@
       playerButtons();
     }, 1000);
   }
-  // Illustrative materials are specific to their recording; no transcription service is called.
-  const insightFixtures = {
-    0: { status: 'ready', lines: [[15, 'Анна Кузнецова', 'Главное — сделать путь от обсуждения до решения короче.'], [146, 'Максим Петров', 'Соберём поиск, записи и материалы встречи в одном месте.'], [328, 'Александр Соколов', 'Проверим мобильный сценарий и покажем результат команде в пятницу.']], summary: 'Обсудили следующую версию продукта и доступ к материалам встреч.', decision: 'Объединить записи, расшифровку и итоги в одном сценарии.', task: 'Анна — проверить мобильный макет к пятнице.' },
-    1: { status: 'processing' },
-    2: { status: 'ready', lines: [[12, 'Александр Соколов', 'Согласуем приоритеты на оставшуюся часть октября.'], [98, 'Анна Кузнецова', 'Предлагаю завершить библиотеку записей и тестирование настроек.'], [240, 'Максим Петров', 'Возьму проверку интеграции, результаты обсудим в понедельник.']], summary: 'Команда согласовала задачи на вторую половину октября.', decision: 'Приоритет — библиотека записей и настройки аккаунта.', task: 'Максим — проверить интеграцию к понедельнику.' },
-    3: { status: 'unavailable' }, 4: { status: 'unavailable' }, 5: { status: 'processing' },
-  };
-  function insights(index) {
-    const item = insightFixtures[index] || { status: records[index]?.dynamic ? 'processing' : 'unavailable' }, tab = S().materialTab || 'transcript';
-    const content = item.status === 'processing' ? `<div class="rr-insight-empty">${I('Clock')}<strong>Материалы обрабатываются</strong><p>Расшифровка и итоги появятся после обработки записи.</p></div>` : item.status === 'unavailable' ? `<div class="rr-insight-empty">${I('FileText')}<strong>Материалы пока недоступны</strong><p>Для этой записи нет готовой расшифровки и итогов.</p></div>` : tab === 'transcript' ? `<div class="rr-transcript">${item.lines.map(([time,name,text]) => `<article><button data-action="rrSeek" data-time="${time}" aria-label="Перейти к ${clock(time)}">${clock(time)}</button><div><strong>${E(name)}</strong><p>${E(text)}</p></div></article>`).join('')}</div>` : `<div class="rr-summary"><p>${E(item.summary)}</p><h4>Решение</h4><p>${E(item.decision)}</p><h4>Задача</h4><p>${E(item.task)}</p><small>Пример итогов ИИ. Проверьте важные детали по записи.</small></div>`;
-    return `<section class="rr-insights"><div class="rr-insight-tabs" role="group" aria-label="Материалы встречи">${[['transcript','Расшифровка'],['summary','Итоги ИИ']].map(([id,label]) => `<button data-action="rrMaterialTab" data-value="${id}" aria-pressed="${tab === id}">${label}</button>`).join('')}</div><div id="rr-insight-content">${content}</div><p class="rr-insight-demo">Демонстрационные материалы</p></section>`;
-  }
   M.screens.recording = {
     title: 'Просмотр записи',
     render() {
       stop(); const index = selected(), r = records[index];
       if (!visible(index)) return M.shell(`<section class="rr-empty">${I('CirclePlay')}<h2>Запись удалена</h2><p>Этой записи больше нет в библиотеке макета.</p><button class="button primary" data-go="recordings">Все записи</button></section>`, 'meetings', 'rr-content');
       S().position = Math.min(S().position, r.seconds);
-      return M.shell(`<section class="rr-player-page"><button class="rr-back" data-go="recordings">${I('ArrowLeft')}Все записи</button><div class="rr-player-heading"><div><span class="rr-eyebrow">${labels[r.mode]}</span><h2>${E(r.title)}</h2><p>${E(r.date)} · ${people(r.people)}</p></div>${menuButton(index)}</div><div class="rr-player-layout"><div class="rr-playback"><div class="rr-player-stage">${cover(r, index, true)}${r.processing ? `<div class="rr-stage-message"><strong>Встреча ещё в эфире</strong><p>Материалы появятся после завершения обработки.</p></div>` : r.mode === 'tracks' ? `<div class="rr-stage-message"><strong>Отдельная дорожка каждого участника</strong><p>Скачайте архив в разделе «Материалы».</p></div>` : `<button class="rr-center-play" data-action="rrPlay" aria-label="${S().playing ? 'Приостановить' : 'Начать'} демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button>`}</div>${!r.processing && r.mode !== 'tracks' ? `<div class="rr-player-controls"><button class="icon-button" data-action="rrPlay" aria-label="Начать демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button><span id="rr-time">${clock(S().position)}</span><input id="rr-seek" type="range" min="0" max="${r.seconds}" value="${S().position}" aria-label="Позиция в записи"/><span>${clock(r.seconds)}</span></div><p class="rr-demo-note">Демонстрация плеера · медиафайл не подключён</p>` : ''}${retention()}<button class="button secondary rr-share" data-action="rrCopy" data-index="${index}">${I('Link')}Скопировать ссылку</button>${insights(index)}</div><aside class="rr-player-info"><section class="rr-info-card"><h3>О записи</h3>${details(r)}</section><section class="rr-info-card"><h3>Материалы</h3>${materials(r).length ? materials(r).map(([name,ext,icon]) => `<div class="rr-material"><span class="rr-file-icon">${I(icon)}</span><div><strong>${name}</strong><small>${ext} · демонстрационный файл</small></div><button class="icon-button" data-action="rrDownload" data-index="${index}" data-file="${ext}" aria-label="Скачать: ${name}">${I('Download')}</button></div>`).join('') : '<p class="rr-muted">Материалы пока не готовы.</p>'}</section></aside></div></section>`, 'meetings', 'rr-content');
+      return M.shell(`<section class="rr-player-page"><button class="rr-back" data-go="recordings">${I('ArrowLeft')}Все записи</button><div class="rr-player-heading"><div><span class="rr-eyebrow">${labels[r.mode]}</span><h2>${E(r.title)}</h2><p>${E(r.date)} · ${people(r.people)}</p></div>${menuButton(index)}</div><div class="rr-player-layout"><div class="rr-playback"><div class="rr-player-stage">${cover(r, index, true)}${r.processing ? `<div class="rr-stage-message"><strong>Встреча ещё в эфире</strong><p>Материалы появятся после завершения обработки.</p></div>` : r.mode === 'tracks' ? `<div class="rr-stage-message"><strong>Отдельная дорожка каждого участника</strong><p>Скачайте архив в разделе «Материалы».</p></div>` : `<button class="rr-center-play" data-action="rrPlay" aria-label="${S().playing ? 'Приостановить' : 'Начать'} демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button>`}</div>${!r.processing && r.mode !== 'tracks' ? `<div class="rr-player-controls"><button class="icon-button" data-action="rrPlay" aria-label="Начать демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button><span id="rr-time">${clock(S().position)}</span><input id="rr-seek" type="range" min="0" max="${r.seconds}" value="${S().position}" aria-label="Позиция в записи"/><span>${clock(r.seconds)}</span></div><p class="rr-demo-note">Демонстрация плеера · медиафайл не подключён</p>` : ''}${retention()}</div><aside class="rr-player-info"><section class="rr-info-card"><h3>О записи</h3>${details(r)}</section>${renderMaterials(r, index)}</aside></div></section>`, 'meetings', 'rr-content');
     },
     bind() {
       const seek = document.getElementById('rr-seek');
@@ -175,8 +176,6 @@
   }
   Object.assign(M.actions, {
     record(button) { const index = recordIndex(button); if (!visible(index)) { M.toast('Запись недоступна'); return; } stop(); M.state.record = index; S().position = 0; S().playing = false; M.go('recording'); },
-    rrMaterialTab(button) { S().materialTab = button.dataset.value === 'summary' ? 'summary' : 'transcript'; M.render(); },
-    rrSeek(button) { S().position = Math.max(0, Math.min(Number(button.dataset.time) || 0, records[selected()].seconds)); playerButtons(); broadcast(); document.getElementById('rr-seek')?.focus({ preventScroll: true }); M.toast(`Позиция записи: ${clock(S().position)}`); },
     rrStatus(button) { S().status = button.dataset.value === 'live' ? 'live' : 'past'; S().meeting = 'all'; M.render(); },
     rrView(button) { S().view = button.dataset.value === 'grid' ? 'grid' : 'list'; document.querySelectorAll('[data-action="rrView"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value === S().view))); redrawResults(); },
     rrReset() { Object.assign(S(), { query: '', meeting: 'all', period: 'all' }); M.render(); },
@@ -184,8 +183,8 @@
     rrCopy(button) { copy(recordIndex(button)); },
     rrMenu(button) {
       const index = recordIndex(button); if (!visible(index)) return;
-      const r = records[index];
-      M.modal('Действия с записью', `<div class="rr-action-sheet"><p>${E(r.title)}</p><button data-action="record" data-index="${index}">${I('CirclePlay')}Открыть запись</button><button data-action="rrCopy" data-index="${index}">${I('Link')}Скопировать ссылку</button>${!r.processing ? `<button data-action="rrDownload" data-index="${index}">${I('Download')}Скачать запись</button>` : ''}${canDelete(index) ? `<button class="rr-danger" data-action="rrDelete" data-index="${index}">${I('Trash2')}Удалить запись</button>` : ''}<small>Ссылка не меняет права доступа к встрече.</small></div>`);
+      const r = records[index], inLibrary = M.state.screen !== 'recording';
+      M.modal('Действия с записью', `<div class="rr-action-sheet"><p>${E(r.title)}</p><button data-action="record" data-index="${index}">${I('CirclePlay')}Открыть запись</button>${inLibrary ? `<button data-action="rrCopy" data-index="${index}">${I('Link')}Скопировать ссылку</button>` : ''}${!r.processing ? `<button data-action="rrDownload" data-index="${index}">${I('Download')}Скачать запись</button>` : ''}${canDelete(index) ? `<button class="rr-danger" data-action="rrDelete" data-index="${index}">${I('Trash2')}Удалить запись</button>` : ''}${inLibrary ? '<small>Ссылка не меняет права доступа к встрече.</small>' : ''}</div>`);
     },
     rrDownload(button) {
       const index = recordIndex(button); if (!visible(index) || records[index].processing) return;
