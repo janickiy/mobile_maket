@@ -167,24 +167,23 @@
     const index = Number(value);
     return Number.isInteger(index) && records[index] ? index : -1;
   }
-  async function copy(index) {
-    if (!visible(index)) return;
-    const url = new URL(location.href); url.searchParams.set('screen', 'recording'); url.searchParams.set('record', index);
-    if (window.parent !== window) url.pathname = url.pathname.replace(/preview\.html$/, 'index.html');
-    try { await navigator.clipboard.writeText(url.href); M.closeModal(); M.toast('Ссылка на запись скопирована'); }
-    catch { M.modal('Ссылка на запись', `<div class="stack"><p>Ссылка открывает эту запись в локальном макете.</p><label class="field">Ссылка<input value="${E(url.href)}" readonly /></label><button class="button primary" data-close>Готово</button></div>`, () => document.querySelector('.modal input')?.select()); }
-  }
   Object.assign(M.actions, {
     record(button) { const index = recordIndex(button); if (!visible(index)) { M.toast('Запись недоступна'); return; } stop(); M.state.record = index; S().position = 0; S().playing = false; M.go('recording'); },
     rrStatus(button) { S().status = button.dataset.value === 'live' ? 'live' : 'past'; S().meeting = 'all'; M.render(); },
     rrView(button) { S().view = button.dataset.value === 'grid' ? 'grid' : 'list'; document.querySelectorAll('[data-action="rrView"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value === S().view))); redrawResults(); },
     rrReset() { Object.assign(S(), { query: '', meeting: 'all', period: 'all' }); M.render(); },
     rrPlay() { S().playing = !S().playing; if (S().playing && S().position >= records[selected()].seconds) S().position = 0; playerButtons(); startTimer(); broadcast(); },
-    rrCopy(button) { copy(recordIndex(button)); },
     rrMenu(button) {
-      const index = recordIndex(button); if (!visible(index)) return;
+      const index = recordIndex(button);
+      if (!visible(index)) return;
       const r = records[index];
-      M.modal('Действия с записью', `<div class="rr-action-sheet"><p>${E(r.title)}</p><button data-action="record" data-index="${index}">${I('CirclePlay')}Открыть запись</button><button data-action="rrCopy" data-index="${index}">${I('Link')}Скопировать ссылку</button>${!r.processing ? `<button data-action="rrDownload" data-index="${index}">${I('Download')}Скачать запись</button>` : ''}${canDelete(index) ? `<button class="rr-danger" data-action="rrDelete" data-index="${index}">${I('Trash2')}Удалить запись</button>` : ''}<small>Ссылка не меняет права доступа к встрече.</small></div>`);
+      M.modal('Действия с записью', `
+        <div class="rr-action-sheet">
+          <p>${E(r.title)}</p>
+          <button data-action="record" data-index="${index}">${I('CirclePlay')}Открыть запись</button>
+          ${!r.processing ? `<button data-action="rrDownload" data-index="${index}">${I('Download')}Скачать запись</button>` : ''}
+          ${canDelete(index) ? `<button class="rr-danger" data-action="rrDelete" data-index="${index}">${I('Trash2')}Удалить запись</button>` : ''}
+        </div>`);
     },
     rrDownload(button) {
       const index = recordIndex(button); if (!visible(index) || records[index].processing) return;
