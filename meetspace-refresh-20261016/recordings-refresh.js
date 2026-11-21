@@ -80,7 +80,9 @@
     M.state.recordLibrary = next; M.state.record = index;
     return changed;
   };
-  const menuButton = index => `<button class="icon-button rr-menu-button" data-action="rrMenu" data-index="${index}" aria-label="Действия с записью: ${E(records[index].title)}" aria-haspopup="dialog">${I('MoreHorizontal')}</button>`;
+  const deleteButton = index => canDelete(index)
+    ? `<button type="button" class="icon-button rr-delete-button" data-action="rrDelete" data-index="${index}" aria-label="Удалить запись: ${E(records[index].title)}" title="Удалить запись" aria-haspopup="dialog">${I('Trash2')}</button>`
+    : '';
   const retention = () => `<div class="rr-retention">${I('Info')}<p>Готовые записи хранятся <strong>7 дней</strong>. Ссылка на страницу доступна только участникам встречи.</p></div>`;
   const waves = () => `<span class="rr-wave" aria-hidden="true">${Array.from({ length: 25 }, (_, i) => `<i style="--wave:${18 + (i * 17 % 38)}px"></i>`).join('')}</span>`;
   function cover(r, index, large = false) {
@@ -93,7 +95,21 @@
   function cards() {
     const list = found();
     if (!list.length) return `<div class="rr-empty">${I('CirclePlay')}<h2>Записи не найдены</h2><p>Попробуйте другую встречу или измените условия поиска.</p><button class="button secondary" data-action="rrReset">Сбросить фильтры</button></div>`;
-    return list.map(r => `<article class="rr-card"><button class="rr-open-cover" data-action="record" data-index="${r.index}" aria-label="Открыть запись: ${E(r.title)}">${cover(r, r.index)}</button><div class="rr-card-body"><span class="rr-kind">${I(icons[r.mode])}${labels[r.mode]}${r.processing ? ' · Идёт запись' : ''}</span><button class="rr-record-title" data-action="record" data-index="${r.index}">${E(r.title)}</button><p class="rr-card-meta">${E(r.date.replace(' 2026', ''))} · ${r.time} · ${people(r.people)}</p><p class="rr-owner">Организатор: ${E(owner(r))}</p></div><div class="rr-card-actions">${!r.processing ? `<button class="rr-watch" data-action="record" data-index="${r.index}">${I(r.mode === 'tracks' ? 'FolderOpen' : 'Play')}<span>${r.mode === 'tracks' ? 'Материалы' : r.mode === 'audio' ? 'Слушать' : 'Смотреть'}</span></button>` : `<span class="rr-processing">В эфире</span>`}${menuButton(r.index)}</div></article>`).join('');
+    return list.map(r => `<article class="rr-card">
+      <button class="rr-open-cover" data-action="record" data-index="${r.index}" aria-label="Открыть запись: ${E(r.title)}">${cover(r, r.index)}</button>
+      <div class="rr-card-body">
+        <span class="rr-kind">${I(icons[r.mode])}${labels[r.mode]}${r.processing ? ' · Идёт запись' : ''}</span>
+        <button class="rr-record-title" data-action="record" data-index="${r.index}">${E(r.title)}</button>
+        <p class="rr-card-meta">${E(r.date.replace(' 2026', ''))} · ${r.time} · ${people(r.people)}</p>
+        <p class="rr-owner">Организатор: ${E(owner(r))}</p>
+      </div>
+      <div class="rr-card-actions">
+        ${r.processing ? '<span class="rr-processing">В эфире</span>' : `<button class="rr-watch" data-action="record" data-index="${r.index}">
+          ${I(r.mode === 'tracks' ? 'FolderOpen' : 'Play')}<span>${r.mode === 'tracks' ? 'Материалы' : r.mode === 'audio' ? 'Слушать' : 'Смотреть'}</span>
+        </button>`}
+        ${deleteButton(r.index)}
+      </div>
+    </article>`).join('');
   }
   function redrawResults() {
     const results = document.getElementById('rr-results');
@@ -148,13 +164,23 @@
       playerButtons();
     }, 1000);
   }
+  function renderPlayerControls(r, index) {
+    if (r.processing || r.mode === 'tracks') return '';
+    return `<div class="rr-player-controls">
+      <button class="icon-button" data-action="rrPlay" aria-label="Начать демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button>
+      <span id="rr-time">${clock(S().position)}</span>
+      <input id="rr-seek" type="range" min="0" max="${r.seconds}" value="${S().position}" aria-label="Позиция в записи"/>
+      <span>${clock(r.seconds)}</span>
+      ${r.mode === 'audio' ? `<button type="button" class="icon-button" data-action="rrDownload" data-index="${index}" aria-label="Скачать аудиозапись" title="Скачать аудиозапись" aria-haspopup="dialog">${I('Download')}</button>` : ''}
+    </div><p class="rr-demo-note">Демонстрация плеера · медиафайл не подключён</p>`;
+  }
   M.screens.recording = {
     title: 'Просмотр записи',
     render() {
       stop(); const index = selected(), r = records[index];
       if (!visible(index)) return M.shell(`<section class="rr-empty">${I('CirclePlay')}<h2>Запись удалена</h2><p>Этой записи больше нет в библиотеке макета.</p><button class="button primary" data-go="recordings">Все записи</button></section>`, 'meetings', 'rr-content');
       S().position = Math.min(S().position, r.seconds);
-      return M.shell(`<section class="rr-player-page"><button class="rr-back" data-go="recordings">${I('ArrowLeft')}Все записи</button><header class="rr-player-heading"><span class="rr-eyebrow">${labels[r.mode]}</span><h2>${E(r.title)}</h2><p>${E(r.date)} · ${people(r.people)}</p></header><div class="rr-player-layout"><div class="rr-playback"><div class="rr-player-stage">${cover(r, index, true)}${r.processing ? `<div class="rr-stage-message"><strong>Встреча ещё в эфире</strong><p>Материалы появятся после завершения обработки.</p></div>` : r.mode === 'tracks' ? `<div class="rr-stage-message"><strong>Отдельная дорожка каждого участника</strong><p>Скачайте архив в разделе «Материалы».</p></div>` : `<button class="rr-center-play" data-action="rrPlay" aria-label="${S().playing ? 'Приостановить' : 'Начать'} демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button>`}</div>${!r.processing && r.mode !== 'tracks' ? `<div class="rr-player-controls"><button class="icon-button" data-action="rrPlay" aria-label="Начать демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button><span id="rr-time">${clock(S().position)}</span><input id="rr-seek" type="range" min="0" max="${r.seconds}" value="${S().position}" aria-label="Позиция в записи"/><span>${clock(r.seconds)}</span></div><p class="rr-demo-note">Демонстрация плеера · медиафайл не подключён</p>` : ''}${retention()}</div><aside class="rr-player-info"><section class="rr-info-card"><h3>О записи</h3>${details(r)}</section>${renderMaterials(r, index)}</aside></div></section>`, 'meetings', 'rr-content');
+      return M.shell(`<section class="rr-player-page"><button class="rr-back" data-go="recordings">${I('ArrowLeft')}Все записи</button><header class="rr-player-heading"><span class="rr-eyebrow">${labels[r.mode]}</span><h2>${E(r.title)}</h2><p>${E(r.date)} · ${people(r.people)}</p></header><div class="rr-player-layout"><div class="rr-playback"><div class="rr-player-stage">${cover(r, index, true)}${r.processing ? `<div class="rr-stage-message"><strong>Встреча ещё в эфире</strong><p>Материалы появятся после завершения обработки.</p></div>` : r.mode === 'tracks' ? `<div class="rr-stage-message"><strong>Отдельная дорожка каждого участника</strong><p>Скачайте архив в разделе «Материалы».</p></div>` : `<button class="rr-center-play" data-action="rrPlay" aria-label="${S().playing ? 'Приостановить' : 'Начать'} демо воспроизведения">${I(S().playing ? 'Pause' : 'Play')}</button>`}</div>${renderPlayerControls(r, index)}${retention()}</div><aside class="rr-player-info"><section class="rr-info-card"><h3>О записи</h3>${details(r)}</section>${renderMaterials(r, index)}</aside></div></section>`, 'meetings', 'rr-content');
     },
     bind() {
       const seek = document.getElementById('rr-seek');
@@ -173,18 +199,6 @@
     rrView(button) { S().view = button.dataset.value === 'grid' ? 'grid' : 'list'; document.querySelectorAll('[data-action="rrView"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value === S().view))); redrawResults(); },
     rrReset() { Object.assign(S(), { query: '', meeting: 'all', period: 'all' }); M.render(); },
     rrPlay() { S().playing = !S().playing; if (S().playing && S().position >= records[selected()].seconds) S().position = 0; playerButtons(); startTimer(); broadcast(); },
-    rrMenu(button) {
-      const index = recordIndex(button);
-      if (!visible(index)) return;
-      const r = records[index];
-      M.modal('Действия с записью', `
-        <div class="rr-action-sheet">
-          <p>${E(r.title)}</p>
-          <button data-action="record" data-index="${index}">${I('CirclePlay')}Открыть запись</button>
-          ${!r.processing ? `<button data-action="rrDownload" data-index="${index}">${I('Download')}Скачать запись</button>` : ''}
-          ${canDelete(index) ? `<button class="rr-danger" data-action="rrDelete" data-index="${index}">${I('Trash2')}Удалить запись</button>` : ''}
-        </div>`);
-    },
     rrDownload(button) {
       const index = recordIndex(button); if (!visible(index) || records[index].processing) return;
       M.modal('Скачать материалы', `<div class="stack"><p>В приложении здесь скачивается ${button.dataset.file === 'ZIP' || records[index].mode === 'tracks' ? 'архив дорожек' : 'медиафайл записи'}. В макете файл не подключён.</p><p class="rr-muted">Можно скачать сведения о демонстрационной записи в текстовом файле.</p><button class="button primary" data-action="rrDownloadInfo" data-index="${index}">${I('Download')}Скачать сведения · TXT</button><button class="button secondary" data-close>Закрыть</button></div>`);
