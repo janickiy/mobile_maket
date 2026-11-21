@@ -179,7 +179,7 @@
 
   function previewURL() {
     const query = new URLSearchParams({
-      rev: "20261121-recording-controls",
+      rev: "20261121-recording-alignment",
       screen: current.id,
       theme,
       chat,
