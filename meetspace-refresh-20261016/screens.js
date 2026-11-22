@@ -153,7 +153,9 @@
     {
       id: "self",
       name: M.state.profileName || "Александр Соколов",
-      initials: "АС",
+      bio: M.state.profileBio || "",
+      email: M.state.profileEmail || "alex@example.org",
+      initials: M.profileInitials?.() || "АС",
       tone: "blue",
     },
     ...contacts.filter((c) => c.kind === "direct"),

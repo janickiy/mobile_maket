@@ -179,7 +179,7 @@
 
   function previewURL() {
     const query = new URLSearchParams({
-      rev: "20261122-profile-bio",
+      rev: "20261122-chat-profile-bio",
       screen: current.id,
       theme,
       chat,

@@ -189,6 +189,32 @@
     </details>`;
   }
 
+  function renderInfoIdentity(person, status, portrait = M.chatAvatarMarkup?.(person) || E(person.initials)) {
+    return `<div class="ci-identity">
+      <span class="ci-avatar avatar ${E(person.tone || '')}" aria-hidden="true">${portrait}</span>
+      <div>
+        <h3 class="ci-name">${E(person.name)}</h3>
+        <p class="ci-status">${status}</p>
+      </div>
+    </div>`;
+  }
+
+  const contactDetails = person => [
+    ['Имя', person.name],
+    ['О себе', person.bio || 'Не указано'],
+    ['Email', person.email || 'Не указан'],
+  ];
+  const renderInfoDetails = rows => `<dl class="ci-details">${rows.map(([label, value]) => `<div><dt>${label}</dt><dd>${E(value)}</dd></div>`).join('')}</dl>`;
+
+  function openOwnProfile() {
+    const person = M.chatMemberDirectory().find(member => member.id === 'self');
+    const portrait = M.profileAvatarMarkup?.(person.initials) || E(person.initials);
+    M.modal('Моя карточка', `<div class="ci-content">
+      ${renderInfoIdentity(person, 'Вы', portrait)}
+      ${renderInfoDetails(contactDetails(person))}
+    </div>`, () => document.querySelector('.modal').classList.add('ci-modal'));
+  }
+
   function openChatInfo(initialTab = 'media') {
     const c = contact();
     if (!c || !M.chatIsVisible(c)) return;
@@ -196,17 +222,11 @@
     const shared = sharedItems();
     const info = group
       ? [['Название', c.name], ['Описание', c.description || 'Описание не добавлено']]
-      : [['Имя', c.name], ['О себе', c.bio || 'Не указано'], ['Email', c.email || 'Не указан']];
+      : contactDetails(c);
 
     M.modal(group ? 'О группе' : 'О контакте', `
       <div class="ci-content">
-        <div class="ci-identity">
-          <span class="ci-avatar avatar ${E(c.tone || '')}" aria-hidden="true">${M.chatAvatarMarkup?.(c) || E(c.initials)}</span>
-          <div>
-            <h3 class="ci-name">${E(c.name)}</h3>
-            <p class="ci-status">${group ? memberCount(c.members.length) : 'В сети'}</p>
-          </div>
-        </div>
+        ${renderInfoIdentity(c, group ? memberCount(c.members.length) : 'В сети')}
         <div class="ci-actions">
           <button type="button" class="ci-action" data-action="chatInfoMessage">${I('MessageCircle')}<span>${group ? 'Перейти в чат' : 'Сообщение'}</span></button>
           ${group ? M.canEditGroup?.(c)
@@ -214,7 +234,7 @@
             : ''
           : `<button type="button" class="ci-action" data-action="startPersonalCall" data-contact="${E(c.id)}">${I('Phone')}<span>Позвонить</span></button>`}
         </div>
-        <dl class="ci-details">${info.map(([label, value]) => `<div><dt>${label}</dt><dd>${E(value)}</dd></div>`).join('')}</dl>
+        ${renderInfoDetails(info)}
         ${group ? infoMembers(c) : ''}
         <section class="ci-shared" aria-label="Содержимое переписки">
           <div class="ci-tabs" role="tablist" aria-label="Вложения и ссылки">
@@ -473,19 +493,18 @@
     if (document.getElementById('cr-chat-dropdown')) {closeHeaderMenu(true); return;}
     const wrapper=document.querySelector('.cr-header-actions'); if (!wrapper) return;
     const options=contact()?.kind === 'group' ? [
-      ['Info','chatInfo','Информация'],
       ['CircleCheck','chatRefreshSelect','Выбрать сообщения'],
       ...(M.canEditGroup?.(contact()) ? [['Pencil','groupEdit','Редактировать группу']] : []),
       ['FolderPlus','folderAssign','Добавить в папку'],
       ['LogOut','chatRefreshLeaveGroup','Покинуть группу']
     ] : [
-      ['Info','chatInfo','Информация'],
       ['CircleCheck','chatRefreshSelect','Выбрать сообщения'],
       [data().muted ? 'Bell' : 'BellOff','chatRefreshMute',data().muted ? 'Включить уведомления' : 'Без уведомлений'],
       ['FolderPlus','folderAssign','Добавить в папку'],
       ['Eraser','chatRefreshClearHistory','Очистить историю'],
       ['Trash2','chatRefreshRemoveChat','Удалить чат']
     ];
+    options.unshift(['Info','chatInfo','Информация'], ['UserRound','chatInfoSelf','Моя карточка']);
     wrapper.insertAdjacentHTML('beforeend',`<div id="cr-chat-dropdown" class="cr-chat-dropdown" role="menu" aria-label="Действия с чатом">${options.map(([icon,action,label])=>`<button type="button" role="menuitem" tabindex="-1" class="${['chatRefreshRemoveChat','chatRefreshLeaveGroup'].includes(action)?'cr-danger':''}" data-action="${action}" ${action==='folderAssign'?`data-item="chat:${E(M.state.chat)}"`:''}>${I(icon)}<span>${label}</span></button>`).join('')}</div>`);
     wrapper.querySelector('.cr-header-menu-trigger').setAttribute('aria-expanded','true');
     wrapper.querySelector('[role="menuitem"]').focus();
@@ -541,6 +560,7 @@
   M.go = function(id) { selection = null; return go.call(this, id); };
   Object.assign(M.actions, {
     chatInfo: () => openChatInfo(),
+    chatInfoSelf: openOwnProfile,
     chatInfoMessage: () => {
       if (M.state.screen !== 'thread' && !document.getElementById('message-input')) M.go('thread');
       else M.closeModal();
