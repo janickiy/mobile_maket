@@ -3,10 +3,10 @@
 .tm-shell.screen-settings .statusbar { background:var(--bg); }
 .tm-shell.screen-settings .account-content { padding:0; }
 .account-layout { --account-scale:1; min-height:100%; font-size:calc(14px * var(--account-scale)); }
-.account-layout button, .account-layout input, .account-layout select { font:inherit; }
+.account-layout button, .account-layout input, .account-layout select, .account-layout textarea { font:inherit; }
 .account-layout button { cursor:pointer; }
 .account-layout button:disabled { cursor:default; opacity:.45; }
-.account-layout button:focus-visible, .account-layout input:focus-visible, .account-layout select:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+.account-layout button:focus-visible, .account-layout input:focus-visible, .account-layout select:focus-visible, .account-layout textarea:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
 .account-layout [hidden] { display:none !important; }
 .account-sidebar { min-width:0; padding:24px 20px 18px; }
 .account-identity { display:flex; align-items:center; gap:14px; padding:0 0 26px; }
@@ -46,7 +46,8 @@
 .account-form { display:grid; gap:26px; }
 .account-field { display:grid; gap:10px; font-size:1em; }
 .account-field > span { font-weight:600; }
-.account-field input, .account-field select { width:100%; min-width:0; min-height:50px; padding:12px 14px; border:1px solid color-mix(in srgb,var(--muted) 65%,var(--line)); border-radius:12px; color:var(--ink); background:var(--surface); }
+.account-field input, .account-field select, .account-field textarea { width:100%; min-width:0; min-height:50px; padding:12px 14px; border:1px solid color-mix(in srgb,var(--muted) 65%,var(--line)); border-radius:12px; color:var(--ink); background:var(--surface); }
+.account-field textarea { min-height:94px; line-height:1.5; resize:vertical; }
 .account-field input[readonly] { background:var(--bg); color:var(--muted); }
 .account-field input[aria-invalid="true"] { border-color:var(--danger); }
 .account-field small { font-size:.83em; line-height:1.65; color:var(--muted); }
@@ -192,7 +193,7 @@
   .account-panel-heading { margin-bottom:32px; }
   .account-panel-heading h2 { font-size:1.65em; }
   .account-avatar.large { width:70px; height:70px; border-radius:20px; }
-  .account-field input, .account-field select { border-radius:10px; }
+  .account-field input, .account-field select, .account-field textarea { border-radius:10px; }
   .account-registration { margin-top:36px; padding-top:26px; }
   .account-theme-preview { height:132px; padding:13px; gap:12px; }
   .account-theme-preview em { height:28px; }

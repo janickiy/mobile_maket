@@ -11,10 +11,11 @@
   ];
   const validSection = (id) => ["connection", "add-account"].includes(id) || sections.some(([key]) => key === id);
   const name = () => M.state.profileName || "Александр Соколов";
+  const bio = () => M.state.profileBio || "";
   const email = () => M.state.profileEmail || "alex@example.org";
   const notifications = { invitations: true, reminders: true, recording: true, email: false, sound: true };
   const s = M.state.account = {
-    section: "profile", open: false, nameDraft: name(), profileSaved: false,
+    section: "profile", open: false, nameDraft: name(), bioDraft: bio(), profileSaved: false,
     mic: "default", speaker: "default", signalOutput: "default", microphoneVolume: 85, speakerVolume: 85, signalVolume: 100, autoMute: false, noise: true,
     camera: "default", cameraOff: false, selfVideo: true, hideVideo: false,
     notifications: { ...notifications }, notificationDraft: { ...notifications }, notificationSaved: false,
@@ -76,11 +77,17 @@
     button.querySelector("span").textContent = "Проверить звук";
     document.getElementById("account-notification-test-status").textContent = "";
   }
+  const validNameDraft = () => {
+    const clean = s.nameDraft.trim();
+    return clean.length > 0 && clean.length <= 100 && !/[\u0000-\u001f\u007f]/.test(clean);
+  };
+  const profileChanged = () => s.nameDraft.trim() !== name() || s.bioDraft.trim() !== bio();
   const profile = () => `${heading("Ваш профиль", "Как вас видят участники встречи.")}${M.renderProfileAvatarEditor?.() || portrait(true)}
     <form id="account-profile-form" class="account-form" novalidate>
       <label class="account-field"><span>Имя для встреч</span><input id="account-name" name="name" value="${E(s.nameDraft)}" minlength="1" maxlength="100" required autocomplete="name" aria-describedby="account-name-hint account-name-error"/><small id="account-name-hint">От 1 до 100 символов.</small><small id="account-name-error" class="account-error" hidden>Введите имя от 1 до 100 символов.</small></label>
+      <label class="account-field"><span>О себе</span><textarea id="account-bio" name="bio" rows="3" placeholder="Расскажите о себе">${E(s.bioDraft)}</textarea></label>
       <label class="account-field"><span>Email</span><input type="email" value="${E(email())}" readonly aria-describedby="account-email-hint"/><small id="account-email-hint">Адрес используется для входа. Изменение email пока недоступно.</small></label>
-      <div class="account-save-row"><button id="account-save-name" class="button primary" ${!s.nameDraft.trim() || s.nameDraft.trim() === name() ? "disabled" : ""}>Сохранить имя</button><span class="account-saved" role="status">${s.profileSaved ? `${I("Check")}Имя сохранено` : ""}</span></div>
+      <div class="account-save-row"><button id="account-save-name" class="button primary" ${!validNameDraft() || !profileChanged() ? "disabled" : ""}>Сохранить профиль</button><span class="account-saved" role="status">${s.profileSaved ? `${I("Check")}Профиль сохранён` : ""}</span></div>
     </form>
     <div class="account-registration">${I("CalendarDays")}<span>Регистрация: 3 окт. 2026 г., 19:17</span></div>${M.renderAccountDanger?.() || ""}`;
   const audio = () => `${heading("Аудио", "Подготовьте звук к следующей встрече.")}
@@ -160,25 +167,38 @@
     title: "Настройки аккаунта", group: "Рабочее пространство",
     render: () => M.shell(`<div class="account-layout ${s.open ? "detail-open" : ""}" style="--account-scale:${s.textSize / 100}">${menu()}<section class="account-panel" aria-labelledby="account-heading"><button class="account-back" data-action="accountBack">${I("ArrowLeft")}${s.section === "add-account" ? "Аккаунты" : "Все настройки"}</button>${panels[s.section]()}</section></div>`, "settings", "account-content"),
     bind: () => {
-      const input = document.getElementById("account-name"), form = document.getElementById("account-profile-form");
-      const validateName = () => {
-        const clean = s.nameDraft.trim(), valid = clean.length > 0 && clean.length <= 100 && !/[\u0000-\u001f\u007f]/.test(clean);
-        document.getElementById("account-save-name").disabled = !valid || clean === name();
-        input.setAttribute("aria-invalid", String(!valid));
-        document.getElementById("account-name-error").hidden = valid;
-        return valid;
-      };
-      input?.addEventListener("input", () => {
-        s.nameDraft = input.value; s.profileSaved = false;
-        form.querySelector(".account-saved").textContent = "";
-        validateName();
-      });
-      form?.addEventListener("submit", (e) => {
-        e.preventDefault(); if (!validateName()) return;
-        M.state.profileName = s.nameDraft.trim(); s.nameDraft = name(); s.profileSaved = true;
-        M.state.participantName = name();
-        M.render(); document.getElementById("account-name")?.focus();
-      });
+      const form = document.getElementById("account-profile-form");
+      if (form) {
+        const nameInput = form.elements.name, bioInput = form.elements.bio;
+        const save = document.getElementById("account-save-name");
+        const validateProfile = () => {
+          const valid = validNameDraft();
+          save.disabled = !valid || !profileChanged();
+          nameInput.setAttribute("aria-invalid", String(!valid));
+          document.getElementById("account-name-error").hidden = valid;
+          return !save.disabled;
+        };
+        form.addEventListener("input", () => {
+          s.nameDraft = nameInput.value;
+          s.bioDraft = bioInput.value;
+          s.profileSaved = false;
+          form.querySelector(".account-saved").textContent = "";
+          validateProfile();
+        });
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (!validateProfile()) return;
+          const focusId = s.nameDraft.trim() === name() ? bioInput.id : nameInput.id;
+          M.state.profileName = s.nameDraft.trim();
+          M.state.profileBio = s.bioDraft.trim();
+          M.state.participantName = name();
+          s.nameDraft = name();
+          s.bioDraft = bio();
+          s.profileSaved = true;
+          M.render();
+          document.getElementById(focusId)?.focus();
+        });
+      }
       const connectionForm = document.getElementById("account-connection-form");
       if (connectionForm) {
         const address = document.getElementById("account-server-address");

@@ -7,8 +7,8 @@
   const preferences = () => Object.fromEntries(preferenceKeys.map((key) => [key, clone(s[key])]));
   const defaults = preferences();
   let accounts = [
-    { id: "personal", name: "Александр Соколов", email: "alex@example.org", server: "https://meet.example.org", preferences: clone(defaults) },
-    { id: "studio", name: "Александр · Студия", email: "alex@studio.example.org", server: "https://team.example.org", preferences: { ...clone(defaults), autoMute: true } },
+    { id: "personal", name: "Александр Соколов", bio: "", email: "alex@example.org", server: "https://meet.example.org", preferences: clone(defaults) },
+    { id: "studio", name: "Александр · Студия", bio: "", email: "alex@studio.example.org", server: "https://team.example.org", preferences: { ...clone(defaults), autoMute: true } },
   ];
   let activeId = "personal", addMode = "login";
   let addDraft = { server: "https://meet.example.org", name: "", email: "" };
@@ -20,16 +20,18 @@
     const account = active();
     if (!account) return;
     account.name = M.state.profileName || account.name;
+    account.bio = M.state.profileBio || "";
     account.email = M.state.profileEmail || account.email;
     account.preferences = preferences();
   };
   const apply = () => {
     const account = active();
     Object.assign(s, clone(defaults), account ? clone(account.preferences) : {}, {
-      nameDraft: account?.name || "", profileSaved: false, notificationSaved: false,
+      nameDraft: account?.name || "", bioDraft: account?.bio || "", profileSaved: false, notificationSaved: false,
       connectionDraft: null, connectionOriginal: null, connectionSaved: false,
     });
     M.state.profileName = account?.name || "";
+    M.state.profileBio = account?.bio || "";
     M.state.profileEmail = account?.email || "";
     M.state.participantName = account?.name || "";
     if (account) M.getOnboardingState().server = account.server;
@@ -50,9 +52,21 @@
     if (value.accounts.some((a) => !a || !["id", "name", "email", "server"].every((key) => typeof a[key] === "string") || !a.preferences)) return false;
     try { if (value.accounts.some((a) => new URL(a.server).protocol !== "https:")) return false; } catch { return false; }
     if (value.accounts.length && !value.accounts.some((a) => a.id === value.activeId)) return false;
-    if (JSON.stringify(M.accountManagerSnapshot()) === JSON.stringify(value)) return false;
-    accounts = value.accounts.map((a) => ({ id: a.id, name: a.name, email: a.email, server: a.server, preferences: Object.fromEntries(preferenceKeys.map((key) => [key, clone(a.preferences[key] ?? defaults[key])])) }));
-    activeId = accounts.length ? value.activeId : null; addMode = value.addMode; addDraft = { server: value.addDraft.server, name: value.addDraft.name, email: value.addDraft.email };
+    const next = {
+      accounts: value.accounts.map((account) => ({
+        id: account.id,
+        name: account.name,
+        bio: typeof account.bio === "string" ? account.bio : "",
+        email: account.email,
+        server: account.server,
+        preferences: Object.fromEntries(preferenceKeys.map((key) => [key, clone(account.preferences[key] ?? defaults[key])])),
+      })),
+      activeId: value.accounts.length ? value.activeId : null,
+      addMode: value.addMode,
+      addDraft: { server: value.addDraft.server, name: value.addDraft.name, email: value.addDraft.email },
+    };
+    if (JSON.stringify(M.accountManagerSnapshot()) === JSON.stringify(next)) return false;
+    ({ accounts, activeId, addMode, addDraft } = next);
     apply(); return true;
   };
   M.completeAccountAuth = ({ name, email, server }, mode = "login") => {
@@ -60,7 +74,7 @@
     const existing = accounts.find((a) => a.email.toLowerCase() === email.toLowerCase() && a.server === normalizedServer);
     if (existing && mode === "register") return "Аккаунт с этой почтой уже добавлен на этом сервере. Перейдите ко входу.";
     capture();
-    const account = existing || { id: crypto.randomUUID(), name: name || email.split("@")[0], email, server: normalizedServer, preferences: clone(defaults) };
+    const account = existing || { id: crypto.randomUUID(), name: name || email.split("@")[0], bio: "", email, server: normalizedServer, preferences: clone(defaults) };
     if (!existing) accounts.push(account);
     activeId = account.id; apply();
     return "";
